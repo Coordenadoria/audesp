@@ -3,7 +3,13 @@ import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { sanitizeObject } from "./dataSanitizer";
 
 // Ensure usage of process.env.API_KEY
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// NOTE: Gemini API calls should be made from backend only
+// This is a frontend placeholder that requires a backend proxy
+let ai: any = null;
+
+if (typeof window === 'undefined' && process.env.API_KEY) {
+    ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+}
 
 // --- SCHEMAS DEFINITIONS (Reusable) ---
 
