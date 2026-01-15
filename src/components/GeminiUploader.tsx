@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { extractBlockData } from '../services/ocrService';
+import { extractBlockData, checkBackendHealth } from '../services/ocrServiceBackend';
 
 interface GeminiUploaderProps {
   section: string; // Chave semântica (ex: 'contratos', 'empenhos')
@@ -10,40 +10,41 @@ interface GeminiUploaderProps {
 export const GeminiUploader: React.FC<GeminiUploaderProps> = ({ section, onDataExtracted }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [backendAvailable, setBackendAvailable] = useState(true);
+
+  // Check backend availability on mount
+  React.useEffect(() => {
+    checkBackendHealth().then(setBackendAvailable);
+  }, []);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      
+      // Validate file type
+      if (!file.type.includes('pdf')) {
+        setError(`❌ Apenas PDF é suportado. Recebido: ${file.type || 'tipo desconhecido'}`);
+        return;
+      }
+
       setLoading(true);
       setError(null);
 
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        try {
-          const base64String = (reader.result as string).split(',')[1];
-          const mimeType = file.type;
-          
-          console.log(`[GeminiUploader] Processing file: ${file.name}, type: ${mimeType}`);
-          
-          // Using the new OCR Service
-          const extractedData = await extractBlockData(base64String, mimeType, section);
-          
-          if (extractedData && extractedData.success) {
-             console.log(`[GeminiUploader] Data extracted successfully:`, extractedData);
-             onDataExtracted(extractedData);
-          } else {
-             console.warn(`[GeminiUploader] No data extracted from document`);
-             setError("OCR: Não foi possível identificar dados estruturados neste documento.");
-          }
-        } catch (err: any) {
-          console.error(`[GeminiUploader] Error processing file:`, err);
-          const errorMsg = err?.message || "Erro desconhecido";
-          setError(`❌ ${errorMsg}. Tente um PDF com melhor qualidade.`);
-        } finally {
-          setLoading(false);
-        }
-      };
-      reader.readAsDataURL(file);
+      try {
+        console.log(`[GeminiUploader] Enviando PDF para backend: ${file.name}`);
+        
+        // Use Python backend OCR service
+        const extractedData = await extractBlockData(file, 'general');
+        
+        console.log(`[GeminiUploader] Dados extraídos com sucesso:`, extractedData);
+        onDataExtracted(extractedData);
+      } catch (err: any) {
+        console.error(`[GeminiUploader] Erro ao processar arquivo:`, err);
+        const errorMsg = err?.message || "Erro ao processar PDF";
+        setError(errorMsg);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 

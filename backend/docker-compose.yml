@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  ocr-backend:
+    build: .
+    container_name: audesp-ocr-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - OCR_PREPROCESS=true
+      - OCR_DPI=300
+    volumes:
+      - ./:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: Add React frontend service
+  # react-frontend:
+  #   build: ../
+  #   container_name: audesp-frontend
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     - REACT_APP_OCR_API=http://ocr-backend:8000
+  #   depends_on:
+  #     - ocr-backend
+  #   command: npm start
