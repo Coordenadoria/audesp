@@ -304,6 +304,176 @@ export function validateConsistency(data: PrestacaoContas): string[] {
 }
 
 /**
+ * NOVO: Retorna campos FALTANDO para transmissão
+ * Mostra exatamente o que o usuário precisa preencher
+ */
+export interface MissingFieldsReport {
+    totalMissing: number;
+    categories: {
+        [category: string]: {
+            description: string;
+            fields: {
+                fieldName: string;
+                requirement: string;
+                manualRef?: string;
+            }[];
+        };
+    };
+    readyToTransmit: boolean;
+}
+
+export function getMissingFieldsForTransmission(data: PrestacaoContas): MissingFieldsReport {
+    const missing: MissingFieldsReport = {
+        totalMissing: 0,
+        categories: {},
+        readyToTransmit: true
+    };
+
+    // 1. Descritor (Seção 1)
+    if (!data.descritor?.municipio || !data.descritor?.entidade || !data.descritor?.ano || !data.descritor?.mes) {
+        missing.categories['Informações Básicas'] = {
+            description: 'Dados de identificação do documento (obrigatórios)',
+            fields: [
+                { fieldName: 'Tipo de Documento', requirement: 'Selecione o tipo', manualRef: 'Manual v1.9 - Seção 1' },
+                { fieldName: 'Município', requirement: 'Código IBGE do município', manualRef: 'Manual v1.9 - Seção 1' },
+                { fieldName: 'Entidade', requirement: 'Código da entidade no Audesp', manualRef: 'Manual v1.9 - Seção 1' },
+                { fieldName: 'Ano/Mês', requirement: 'Período da prestação (obrigatoriamente mês 12 - dezembro)', manualRef: 'Manual v1.9 - Seção 1' }
+            ]
+        };
+        missing.totalMissing += 4;
+        missing.readyToTransmit = false;
+    }
+
+    // 2. Dados Gerais (Seção 2)
+    if (!data.dados_gerais_entidade_beneficiaria) {
+        missing.categories['Dados da Entidade'] = {
+            description: 'Informações sobre a entidade beneficiária',
+            fields: [
+                { fieldName: 'CNPJ', requirement: 'CNPJ válido (14 dígitos)', manualRef: 'Manual v1.9 - Seção 2' },
+                { fieldName: 'Razão Social', requirement: 'Nome da entidade', manualRef: 'Manual v1.9 - Seção 2' },
+                { fieldName: 'Certidão - Dados Gerais', requirement: 'Preenchimento de dados gerais', manualRef: 'Manual v1.9 - Seção 2' },
+                { fieldName: 'Certidão - Corpo Diretivo', requirement: 'Informações do corpo diretivo', manualRef: 'Manual v1.9 - Seção 2' },
+                { fieldName: 'Certidão - Conselho', requirement: 'Informações do conselho', manualRef: 'Manual v1.9 - Seção 2' },
+                { fieldName: 'Certidão - Membros Comissão', requirement: 'Membros da comissão de avaliação', manualRef: 'Manual v1.9 - Seção 2' }
+            ]
+        };
+        missing.totalMissing += 6;
+        missing.readyToTransmit = false;
+    }
+
+    // 3. Responsáveis (Seção 3)
+    if (!data.responsaveis_membros_orgao_concessor || Object.keys(data.responsaveis_membros_orgao_concessor).length === 0) {
+        if (!missing.categories['Responsáveis']) {
+            missing.categories['Responsáveis'] = {
+                description: 'Pessoas responsáveis pela prestação',
+                fields: [
+                    { fieldName: 'Responsável', requirement: 'Nome completo do responsável', manualRef: 'Manual v1.9 - Seção 3' },
+                    { fieldName: 'CPF', requirement: 'CPF válido do responsável', manualRef: 'Manual v1.9 - Seção 3' },
+                    { fieldName: 'Certidão - Membros', requirement: 'Identificação de membros do órgão', manualRef: 'Manual v1.9 - Seção 3' }
+                ]
+            };
+            missing.totalMissing += 3;
+            missing.readyToTransmit = false;
+        }
+    }
+
+    // 4. Receitas (Seção 4)
+    if (!data.receitas || Object.keys(data.receitas).length === 0) {
+        missing.categories['Receitas'] = {
+            description: 'Movimento financeiro de entrada (repasses, arrecadações, etc)',
+            fields: [
+                { fieldName: 'Repasses Recebidos', requirement: 'Valores recebidos de órgão concedente', manualRef: 'Manual v1.9 - Seção 4' },
+                { fieldName: 'Receitas de Aplicações Financeiras', requirement: 'Juros e rendimentos', manualRef: 'Manual v1.9 - Seção 4' },
+                { fieldName: 'Recursos Próprios', requirement: 'Receitas do próprio órgão', manualRef: 'Manual v1.9 - Seção 4' }
+            ]
+        };
+        missing.totalMissing += 3;
+        missing.readyToTransmit = false;
+    }
+
+    // 5. Documentos Fiscais (Seção 5)
+    if (!data.documentos_fiscais || data.documentos_fiscais.length === 0) {
+        missing.categories['Documentos Fiscais'] = {
+            description: 'Notas fiscais, recibos e comprovantes de despesas',
+            fields: [
+                { fieldName: 'Documentos Fiscais', requirement: 'Pelo menos 1 documento ou deixar vazio se sem despesas', manualRef: 'Manual v1.9 - Seção 5' }
+            ]
+        };
+        missing.readyToTransmit = false; // Pode estar vazio se não houver despesas
+    }
+
+    // 6. Relação de Bens (Seção 6)
+    if (!data.relacao_bens || Object.keys(data.relacao_bens).length === 0) {
+        missing.categories['Relação de Bens'] = {
+            description: 'Bens móveis e imóveis adquiridos, cedidos ou baixados',
+            fields: [
+                { fieldName: 'Bens Móveis Adquiridos', requirement: 'Lista de bens móveis adquiridos (pode ser vazio)', manualRef: 'Manual v1.9 - Seção 6' },
+                { fieldName: 'Bens Móveis Cedidos', requirement: 'Bens cedidos para terceiros (pode ser vazio)', manualRef: 'Manual v1.9 - Seção 6' },
+                { fieldName: 'Bens Imóveis', requirement: 'Propriedades (pode ser vazio)', manualRef: 'Manual v1.9 - Seção 6' }
+            ]
+        };
+        missing.readyToTransmit = false; // Pode estar vazio
+    }
+
+    // 7. Ajustes de Saldo (Seção 7)
+    if (!data.ajustes_saldo || Object.keys(data.ajustes_saldo).length === 0) {
+        missing.categories['Ajustes Contábeis'] = {
+            description: 'Retificações e inclusões de transações',
+            fields: [
+                { fieldName: 'Retificações de Repasses', requirement: 'Ajustes em repasses anteriores', manualRef: 'Manual v1.9 - Seção 7' },
+                { fieldName: 'Inclusões de Repasses', requirement: 'Novos repasses descobertos', manualRef: 'Manual v1.9 - Seção 7' },
+                { fieldName: 'Ajustes de Pagamentos', requirement: 'Retificações e inclusões de pagamentos', manualRef: 'Manual v1.9 - Seção 7' }
+            ]
+        };
+        missing.totalMissing += 3;
+        missing.readyToTransmit = false;
+    }
+
+    // 8. Disponibilidades (Seção 8)
+    if (!data.disponibilidades || Object.keys(data.disponibilidades).length === 0) {
+        missing.categories['Disponibilidades'] = {
+            description: 'Saldos bancários e fundos de caixa',
+            fields: [
+                { fieldName: 'Saldos Bancários', requirement: 'Saldo de contas bancárias', manualRef: 'Manual v1.9 - Seção 8' },
+                { fieldName: 'Saldo de Fundo Fixo', requirement: 'Dinheiro em caixa ou fundo fixo', manualRef: 'Manual v1.9 - Seção 8' }
+            ]
+        };
+        missing.totalMissing += 2;
+        missing.readyToTransmit = false;
+    }
+
+    // 9. Relatórios (Seções 9-12)
+    const relatorios = {
+        'relatorio_atividades': 'Relatório de Atividades',
+        'demonstracoes_contabeis': 'Demonstrações Contábeis',
+        'relatorio_governamental_analise_execucao': 'Análise de Execução Governamental',
+        'parecer_conclusivo': 'Parecer Conclusivo'
+    };
+
+    const missingRelatorios: string[] = [];
+    for (const [key, label] of Object.entries(relatorios)) {
+        if (!data[key as keyof PrestacaoContas]) {
+            missingRelatorios.push(label);
+        }
+    }
+
+    if (missingRelatorios.length > 0) {
+        missing.categories['Relatórios'] = {
+            description: 'Documentos de análise e parecer',
+            fields: missingRelatorios.map(r => ({
+                fieldName: r,
+                requirement: 'Descrição ou documento anexado',
+                manualRef: 'Manual v1.9 - Seções 9-12'
+            }))
+        };
+        missing.totalMissing += missingRelatorios.length;
+        missing.readyToTransmit = false;
+    }
+
+    return missing;
+}
+
+/**
  * Função principal de validação para transmissão
  */
 export function validatePrestacaoContas(data: PrestacaoContas): string[] {

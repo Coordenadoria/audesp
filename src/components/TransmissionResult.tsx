@@ -1,13 +1,15 @@
 
 import React from 'react';
 import { AudespResponse } from '../types';
+import { MissingFieldsPanel } from './MissingFieldsPanel';
 
 interface Props {
     result: AudespResponse;
     onClose: () => void;
+    formData?: any;
 }
 
-export const TransmissionResult: React.FC<Props> = ({ result, onClose }) => {
+export const TransmissionResult: React.FC<Props> = ({ result, onClose, formData }) => {
     
     const isSuccess = result.status === 'Recebido';
     const isWarning = result.status === 'Armazenado';
@@ -60,8 +62,9 @@ export const TransmissionResult: React.FC<Props> = ({ result, onClose }) => {
                         </div>
                     </div>
 
-                    {/* Errors / Messages */}
-                    {result.erros && result.erros.length > 0 && (
+                {/* Errors / Messages */}
+                {result.erros && result.erros.length > 0 && (
+                    <div>
                         <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
                             <div className="bg-slate-100 p-2 border-b border-slate-200">
                                 <h4 className="text-xs font-bold text-slate-600 uppercase">Detalhamento da Análise</h4>
@@ -91,7 +94,19 @@ export const TransmissionResult: React.FC<Props> = ({ result, onClose }) => {
                                 </tbody>
                             </table>
                         </div>
-                    )}
+
+                        {/* Se houver dados do formulário, mostrar o painel de campos faltando */}
+                        {formData && isError && (
+                            <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                <h4 className="font-bold text-blue-900 mb-3">📋 Campos Faltando para Transmissão</h4>
+                                <p className="text-sm text-blue-700 mb-3">
+                                  Complete os campos listados abaixo conforme especificado no Manual v1.9:
+                                </p>
+                                <MissingFieldsPanel data={formData} />
+                            </div>
+                        )}
+                    </div>
+                )}
                 </div>
 
                 {/* Footer */}
