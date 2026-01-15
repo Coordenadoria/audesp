@@ -2,11 +2,31 @@
 import React from 'react';
 import { ArrayBlock, InputGroup, CLS, Field } from '../ui/BlockBase';
 import { Contrato, DocumentoFiscal, Pagamento, PrestacaoContas } from '../../schemas/type-definitions';
+import { PDFUploader } from '../PDFUploader';
+import { mapExtractedDataToForm } from '../../services/ocrService';
 
 // --- 6. Contratos ---
 export const ContratosBlock = ({ data, onUpdate, onAdd, onRemove }: any) => {
     return (
-        <ArrayBlock<Contrato>
+        <>
+            {/* OCR Upload */}
+            <div className="mb-6 p-4 bg-purple-50 border-2 border-purple-200 rounded-lg">
+                <p className="text-sm font-semibold text-purple-800 mb-2">📄 Extrair Contratos de PDF</p>
+                <p className="text-xs text-purple-700 mb-3">Carregue um PDF com dados de contratos para pré-preenchimento automático:</p>
+                <PDFUploader 
+                    onDataExtracted={(extracted, confidence) => {
+                        const mapped = mapExtractedDataToForm(extracted);
+                        if (mapped.contratos && Array.isArray(mapped.contratos)) {
+                            // Adicionar cada contrato extraído
+                            mapped.contratos.forEach((c: any) => onAdd(c));
+                            console.log(`✓ ${mapped.contratos.length} contrato(s) adicionado(s) com ${Math.round(confidence * 100)}% confiança`);
+                        }
+                    }}
+                    onError={(error) => alert(`❌ Erro: ${error}`)}
+                />
+            </div>
+        
+            <ArrayBlock<Contrato>
             title="6. Contratos"
             items={data.contratos || []}
             newItemTemplate={{ 
@@ -46,6 +66,7 @@ export const ContratosBlock = ({ data, onUpdate, onAdd, onRemove }: any) => {
                 </div>
             )}
         />
+        </>
     );
 };
 
@@ -54,7 +75,24 @@ export const DocsFiscaisBlock = ({ data, onUpdate, onAdd, onRemove, fullData }: 
     const contracts = (fullData as PrestacaoContas).contratos || [];
 
     return (
-        <ArrayBlock<DocumentoFiscal>
+        <>
+            {/* OCR Upload */}
+            <div className="mb-6 p-4 bg-cyan-50 border-2 border-cyan-200 rounded-lg">
+                <p className="text-sm font-semibold text-cyan-800 mb-2">📄 Extrair Documentos Fiscais de PDF</p>
+                <p className="text-xs text-cyan-700 mb-3">Carregue um PDF com notas fiscais para pré-preenchimento automático:</p>
+                <PDFUploader 
+                    onDataExtracted={(extracted, confidence) => {
+                        const mapped = mapExtractedDataToForm(extracted);
+                        if (mapped.documentos_fiscais && Array.isArray(mapped.documentos_fiscais)) {
+                            mapped.documentos_fiscais.forEach((d: any) => onAdd(d));
+                            console.log(`✓ ${mapped.documentos_fiscais.length} documento(s) fiscal(is) adicionado(s)`);
+                        }
+                    }}
+                    onError={(error) => alert(`❌ Erro: ${error}`)}
+                />
+            </div>
+
+            <ArrayBlock<DocumentoFiscal>
             title="7. Documentos Fiscais"
             items={data.documentos_fiscais || []}
             newItemTemplate={{ 
@@ -112,6 +150,7 @@ export const DocsFiscaisBlock = ({ data, onUpdate, onAdd, onRemove, fullData }: 
                 </div>
             )}
         />
+        </>
     );
 };
 

@@ -2,6 +2,8 @@
 import React from 'react';
 import { Field, CLS, SectionHeader, ArrayBlock } from '../ui/BlockBase';
 import { PrestacaoContas, DadosGerais, Responsaveis, Declaracoes } from '../../schemas/type-definitions';
+import { PDFUploader } from '../PDFUploader';
+import { mapExtractedDataToForm } from '../../services/ocrService';
 
 // --- 19. Dados Gerais ---
 export const DadosGeraisBlock = ({ data, updateField }: { data: PrestacaoContas, updateField: Function }) => {
@@ -74,6 +76,30 @@ export const DeclaracoesBlock = ({ data, updateField }: { data: PrestacaoContas,
         <div className="space-y-6">
             <div className={CLS.SECTION}>
                 <SectionHeader title="21. Declarações Obrigatórias" />
+                
+                {/* OCR Upload */}
+                <div className="mb-6 p-4 bg-blue-50 border-2 border-blue-200 rounded-lg">
+                    <p className="text-sm font-semibold text-blue-800 mb-2">📄 Pré-preenchimento Automático</p>
+                    <p className="text-xs text-blue-700 mb-3">Carregue um PDF com dados de empresas e responsáveis para pré-preenchimento automático:</p>
+                    <PDFUploader 
+                        onDataExtracted={(extracted, confidence) => {
+                            const mapped = mapExtractedDataToForm(extracted);
+                            // Pré-preencher dados extraídos
+                            if (mapped.dados_gerais_entidade_beneficiaria) {
+                                updateField('dados_gerais_entidade_beneficiaria', mapped.dados_gerais_entidade_beneficiaria);
+                            }
+                            if (mapped.descritor) {
+                                updateField('descritor', mapped.descritor);
+                            }
+                            const message = `✓ Dados extraídos com ${Math.round(confidence * 100)}% confiança!`;
+                            console.log(message, mapped);
+                        }}
+                        onError={(error) => {
+                            console.error('OCR Error:', error);
+                            alert(`❌ Erro na extração: ${error}`);
+                        }}
+                    />
+                </div>
                 
                 {/* 21.1 Empresas Pertencentes */}
                 <div className="mb-6 border-b border-slate-100 pb-6">
