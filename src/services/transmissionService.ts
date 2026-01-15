@@ -4,13 +4,14 @@ import { saveProtocol } from './protocolService';
 
 /**
  * TRANSMISSION SERVICE
- * Endpoint Oficial de Envio (Piloto): https://audesp-piloto.tce.sp.gov.br/f5/enviar-prestacao-contas-convenio
+ * Endpoint Oficial de Envio (Piloto): https://audesp-piloto.tce.sp.gov.br/enviar-prestacao-contas-convenio
  * Proxied in dev via /proxy-f5
+ * NOTA: Removido /f5 do path pois estava causando erro 403
  */
 
 const API_BASE = process.env.NODE_ENV === 'development'
   ? "/proxy-f5"
-  : "https://audesp-piloto.tce.sp.gov.br/f5";
+  : "https://audesp-piloto.tce.sp.gov.br";
 
 const ROUTE_MAP: Record<TipoDocumentoDescritor, string> = {
     "Prestação de Contas de Convênio": "/enviar-prestacao-contas-convenio",
@@ -36,33 +37,40 @@ export async function sendPrestacaoContas(token: string, data: PrestacaoContas):
 
   const fullUrl = `${API_BASE}${endpoint}`;
   console.log(`[Transmission] Enviando para: ${fullUrl}`);
+  console.log(`[Transmission] Token prefix: ${token.substring(0, 20)}...`);
 
-  // ERRO 400 FIX (Schema Validation): 
-  // O servidor rejeitou o objeto envelopado em { prestacao_contas: ... }.
-  // O Schema espera que as propriedades (descritor, empregados, etc) estejam na RAIZ do JSON.
   const payload = data; 
 
   // ERRO 400 FIX (Multipart): O servidor exige multipart/form-data.
-  // Empacotamos o JSON como um arquivo 'documentoJSON' dentro de um FormData.
   const formData = new FormData();
   const jsonBlob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
   
-  // FIXED: Renamed 'arquivo' to 'documentoJSON' based on server error message
   formData.append('documentoJSON', jsonBlob, `prestacao_${data.descritor.entidade}_${data.descritor.mes}_${data.descritor.ano}.json`);
 
   try {
-    const response = await fetch(fullUrl, {
-      method: 'POST',
+    const requestConfig = {
+      method: 'POST' as const,
       headers: {
         'Authorization': `Bearer ${token}`,
         'Accept': 'application/json'
-        // NÃO definir Content-Type aqui. O browser define automaticamente como multipart/form-data; boundary=...
       },
-      body: formData
+      body: formData,
+      credentials: 'include' as const
+    };
+
+    console.log(`[Transmission] Request headers:`, {
+      'Authorization': `Bearer ${token.substring(0, 20)}...`,
+      'Accept': 'application/json'
     });
+
+    const response = await fetch(fullUrl, requestConfig);
 
     const responseText = await response.text();
     console.log(`[Transmission] Status: ${response.status}`);
+    console.log(`[Transmission] Response headers:`, {
+      'content-type': response.headers.get('content-type'),
+      'access-control-allow-origin': response.headers.get('access-control-allow-origin')
+    });
     
     let result: any;
     try {
@@ -74,6 +82,16 @@ export async function sendPrestacaoContas(token: string, data: PrestacaoContas):
     if (!response.ok) {
         // Formata erro JSON para exibição amigável
         const errorDetails = JSON.stringify(result, null, 2);
+        
+        // Adicionar contexto de debugging para erro 403
+        if (response.status === 403) {
+            console.error(`[Transmission] 403 Forbidden - Verificar:
+1. Token de autenticação válido: ${token ? 'SIM' : 'NÃO'}
+2. Permissões do usuário no Audesp Piloto
+3. Endpoint correto: ${fullUrl}
+4. CORS configurado no servidor`);
+        }
+        
         throw new Error(errorDetails);
     }
 
