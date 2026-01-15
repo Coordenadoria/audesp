@@ -9,7 +9,7 @@ import { saveProtocol } from './protocolService';
  * IMPORTANTE: /f5 é NECESSÁRIO - faz parte da API oficial
  */
 
-const API_BASE = process.env.NODE_ENV === 'development'
+const API_BASE = typeof window !== 'undefined' && window.location.hostname === 'localhost'
   ? "/proxy-f5"
   : "https://audesp-piloto.tce.sp.gov.br/f5";
 
