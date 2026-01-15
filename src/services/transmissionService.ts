@@ -4,14 +4,14 @@ import { saveProtocol } from './protocolService';
 
 /**
  * TRANSMISSION SERVICE
- * Endpoint Oficial de Envio (Piloto): https://audesp-piloto.tce.sp.gov.br/enviar-prestacao-contas-convenio
- * Proxied in dev via /proxy-f5
- * NOTA: Removido /f5 do path pois estava causando erro 403
+ * Endpoint Oficial de Envio (Piloto): https://audesp-piloto.tce.sp.gov.br/f5/enviar-prestacao-contas-convenio
+ * Proxied in dev via /proxy-f5 (rewritten to /f5)
+ * IMPORTANTE: /f5 é NECESSÁRIO - faz parte da API oficial
  */
 
 const API_BASE = process.env.NODE_ENV === 'development'
   ? "/proxy-f5"
-  : "https://audesp-piloto.tce.sp.gov.br";
+  : "https://audesp-piloto.tce.sp.gov.br/f5";
 
 const ROUTE_MAP: Record<TipoDocumentoDescritor, string> = {
     "Prestação de Contas de Convênio": "/enviar-prestacao-contas-convenio",
