@@ -36,7 +36,7 @@ module.exports = function(app) {
   );
 
   // 2. PROXY TRANSMISSÃO
-  // Target: https://audesp-piloto.tce.sp.gov.br/f5/...
+  // Target: https://audesp-piloto.tce.sp.gov.br/...
   app.use(
     '/proxy-f5',
     createProxyMiddleware({
@@ -46,7 +46,7 @@ module.exports = function(app) {
       proxyTimeout: 60000,
       timeout: 60000,
       pathRewrite: {
-        '^/proxy-f5': '/f5', 
+        '^/proxy-f5': '', // Remove prefix - NO /f5 (was causing 403)
       },
       logLevel: 'debug',
       onProxyReq: (proxyReq, req, res) => {
@@ -56,7 +56,7 @@ module.exports = function(app) {
         
         // Force Origin to match target to bypass CSRF/WAF checks
         proxyReq.setHeader('Origin', 'https://audesp-piloto.tce.sp.gov.br');
-        proxyReq.setHeader('Referer', 'https://audesp-piloto.tce.sp.gov.br/f5/');
+        proxyReq.setHeader('Referer', 'https://audesp-piloto.tce.sp.gov.br/');
       },
       onError: (err, req, res) => {
         console.error('[Proxy Error] Transmission:', err);

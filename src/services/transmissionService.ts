@@ -48,22 +48,36 @@ export async function sendPrestacaoContas(token: string, data: PrestacaoContas):
   formData.append('documentoJSON', jsonBlob, `prestacao_${data.descritor.entidade}_${data.descritor.mes}_${data.descritor.ano}.json`);
 
   try {
-    const requestConfig = {
-      method: 'POST' as const,
+    // Setup timeout with AbortController
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+    const requestConfig: RequestInit = {
+      method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Accept': 'application/json'
       },
       body: formData,
-      credentials: 'include' as const
+      credentials: 'include',
+      signal: controller.signal
     };
 
     console.log(`[Transmission] Request headers:`, {
       'Authorization': `Bearer ${token.substring(0, 20)}...`,
-      'Accept': 'application/json'
+      'Accept': 'application/json',
+      'Content-Type': 'multipart/form-data (auto)'
     });
+    console.log(`[Transmission] Endpoint: ${fullUrl}`);
+    console.log(`[Transmission] Method: POST`);
+    console.log(`[Transmission] Environment: ${process.env.NODE_ENV}`);
 
-    const response = await fetch(fullUrl, requestConfig);
+    let response: Response;
+    try {
+      response = await fetch(fullUrl, requestConfig);
+    } finally {
+      clearTimeout(timeout);
+    }
 
     const responseText = await response.text();
     console.log(`[Transmission] Status: ${response.status}`);
@@ -109,6 +123,33 @@ export async function sendPrestacaoContas(token: string, data: PrestacaoContas):
 
   } catch (error: any) {
     console.error("[Transmission Error]", error);
-    throw error;
+    
+    // Detailed error diagnostics for "Failed to fetch"
+    let diagnosticMessage = "";
+    
+    if (error.name === 'AbortError') {
+      diagnosticMessage = `❌ TIMEOUT (30s): Servidor não respondeu em tempo hábil\n• Verifique se https://audesp-piloto.tce.sp.gov.br está online\n• Tente novamente em alguns segundos`;
+    } else if (error.message?.includes('Failed to fetch')) {
+      diagnosticMessage = `❌ ERRO DE CONEXÃO (CORS/Network):\n• Servidor pode estar indisponível\n• Verificar se domínio está acessível: https://audesp-piloto.tce.sp.gov.br\n• Pode ser bloqueio de CORS do navegador\n• Tente em produção (não localhost)`;
+    } else if (error.message?.includes('NetworkError')) {
+      diagnosticMessage = `❌ ERRO DE REDE:\n• Verifique sua conexão de internet\n• Tente novamente em alguns segundos\n• Se persistir, contate o administrador da rede`;
+    } else if (error.message?.includes('TypeError')) {
+      diagnosticMessage = `❌ ERRO DE TIPO/CONFIGURAÇÃO:\n• Problema na construção da requisição\n• Verifique token e formato de dados`;
+    } else {
+      diagnosticMessage = `❌ ERRO DESCONHECIDO: ${error.message}`;
+    }
+    
+    console.error(`[Transmission Diagnostic]\n${diagnosticMessage}`);
+    console.error(`[Transmission Debug Info]`, {
+      url: fullUrl,
+      method: 'POST',
+      tokenPrefix: token?.substring(0, 10) + '...',
+      environment: process.env.NODE_ENV,
+      errorName: error.name,
+      errorMessage: error.message,
+      errorStack: error.stack?.split('\n').slice(0, 3).join('\n')
+    });
+    
+    throw new Error(diagnosticMessage);
   }
 }
