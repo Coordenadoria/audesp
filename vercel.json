@@ -1,0 +1,27 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "build",
+  "regions": ["sfo1"],
+  "env": {
+    "GEMINI_API_KEY": "@GEMINI_API_KEY"
+  },
+  "envPrefix": "REACT_APP_",
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600, s-maxage=3600"
+        }
+      ]
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/",
+      "permanent": false
+    }
+  ]
+}
