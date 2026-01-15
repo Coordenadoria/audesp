@@ -3,7 +3,7 @@ import { TokenResponse } from '../types';
 
 /**
  * AUTH SERVICE
- * Endpoint: https://audesp-piloto.tce.sp.gov.br/login
+ * Endpoint Oficial: https://audesp-piloto.tce.sp.gov.br/login
  * Proxied in dev via /proxy-login
  */
 
