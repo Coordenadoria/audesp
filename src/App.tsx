@@ -51,15 +51,21 @@ const App: React.FC = () => {
   }, [authToken]);
 
   useEffect(() => {
-      if (isAuthenticated()) {
-          setIsLoggedIn(true);
-          setAuthToken(getToken());
-          const draft = localStorage.getItem('audesp_draft');
-          if (draft) {
-             try { setFormData(JSON.parse(draft)); } catch {}
+      try {
+          if (isAuthenticated()) {
+              setIsLoggedIn(true);
+              setAuthToken(getToken());
+              const draft = localStorage.getItem('audesp_draft');
+              if (draft) {
+                 try { setFormData(JSON.parse(draft)); } catch {}
+              }
+          } else {
+              handleLogout();
           }
-      } else {
-          handleLogout();
+      } catch (error) {
+          console.error("Auth initialization error:", error);
+          // Allow app to load even if auth fails
+          setIsLoggedIn(false);
       }
   }, []);
 
