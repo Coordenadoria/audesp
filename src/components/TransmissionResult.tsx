@@ -36,15 +36,24 @@ export const TransmissionResult: React.FC<Props> = ({ result, onClose, formData 
     return (
         <div className="fixed inset-0 bg-slate-900/80 z-[60] flex items-center justify-center p-4">
             <div className={`w-full max-w-2xl bg-white rounded-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh]`}>
-                {/* Header */}
-                <div className={`p-6 border-b-4 ${isSuccess ? 'border-green-500 bg-green-100' : isWarning ? 'border-yellow-500 bg-yellow-100' : 'border-red-500 bg-red-100'}`}>
-                    <div className="flex items-center gap-3">
+                {/* Header with Close Button */}
+                <div className={`p-6 border-b-4 ${isSuccess ? 'border-green-500 bg-green-100' : isWarning ? 'border-yellow-500 bg-yellow-100' : 'border-red-500 bg-red-100'} flex items-start justify-between`}>
+                    <div className="flex items-center gap-3 flex-1">
                         <span className="text-3xl">{getIcon()}</span>
                         <div>
                             <h2 className="text-xl font-black text-slate-800 tracking-tight">{getTitle()}</h2>
                             <p className="text-sm font-bold text-slate-600 opacity-80">{result.tipoDocumento}</p>
                         </div>
                     </div>
+                    <button
+                        onClick={onClose}
+                        className="text-slate-400 hover:text-slate-600 transition-colors p-2"
+                        title="Fechar (Esc)"
+                    >
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
                 </div>
 
                 {/* Body */}
@@ -111,12 +120,19 @@ export const TransmissionResult: React.FC<Props> = ({ result, onClose, formData 
 
                 {/* Footer */}
                 <div className="p-4 border-t border-slate-200 bg-white flex justify-end gap-3">
-                    <button onClick={onClose} className="px-6 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded shadow transition-colors">
-                        Fechar
+                    <button 
+                        onClick={onClose} 
+                        className="px-6 py-2 bg-slate-600 hover:bg-slate-700 text-white font-bold rounded shadow transition-colors flex items-center gap-2"
+                        title="Fechar resultado (Esc)"
+                    >
+                        <span>✕</span> Fechar
                     </button>
                     {isSuccess && (
-                        <button onClick={() => window.print()} className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded shadow transition-colors">
-                            Imprimir Recibo
+                        <button 
+                            onClick={() => window.print()} 
+                            className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded shadow transition-colors flex items-center gap-2"
+                        >
+                            <span>🖨️</span> Imprimir Recibo
                         </button>
                     )}
                 </div>

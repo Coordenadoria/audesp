@@ -319,32 +319,39 @@ export async function extractBlockData(base64String: string, mimeType: string, s
   console.log(`[OCR] Extracting block data for section: ${section}`);
   console.log(`[OCR] Mime type: ${mimeType}`);
   
-  // Se é PDF, usa OCR
-  if (mimeType === 'application/pdf') {
-    // Converter base64 para Blob/File
-    const binaryString = atob(base64String);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
+  try {
+    // Se é PDF, usa OCR
+    if (mimeType === 'application/pdf') {
+      // Converter base64 para Blob/File
+      const binaryString = atob(base64String);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      const blob = new Blob([bytes], { type: mimeType });
+      const file = new File([blob], 'document.pdf', { type: mimeType });
+      
+      // Processar PDF com OCR
+      const extracted = await processPDFFile(file);
+      
+      // Mapear para a seção especificada
+      const mapped = mapExtractedDataToForm(extracted);
+      
+      console.log(`[OCR] Extraction complete for section ${section}. Confidence: ${extracted.confidence}`);
+      
+      return {
+        success: true,
+        source: 'PDF_OCR',
+        confidence: extracted.confidence,
+        data: mapped,
+        section: section
+      };
     }
-    const blob = new Blob([bytes], { type: mimeType });
-    const file = new File([blob], 'document.pdf', { type: mimeType });
     
-    // Processar PDF com OCR
-    const extracted = await processPDFFile(file);
-    
-    // Mapear para a seção especificada
-    const mapped = mapExtractedDataToForm(extracted);
-    
-    return {
-      success: true,
-      source: 'PDF_OCR',
-      confidence: extracted.confidence,
-      data: mapped,
-      section: section
-    };
+    // Para outros tipos de documento, retorna erro (apenas PDF suportado por enquanto)
+    throw new Error(`Apenas PDF é suportado. Recebido: ${mimeType}`);
+  } catch (error: any) {
+    console.error(`[OCR] Error in extractBlockData:`, error);
+    throw new Error(`Erro ao processar PDF: ${error.message}`);
   }
-  
-  // Para outros tipos de documento, retorna erro (apenas PDF suportado por enquanto)
-  throw new Error(`Tipo de documento não suportado: ${mimeType}`);
 }

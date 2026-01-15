@@ -23,17 +23,22 @@ export const GeminiUploader: React.FC<GeminiUploaderProps> = ({ section, onDataE
           const base64String = (reader.result as string).split(',')[1];
           const mimeType = file.type;
           
+          console.log(`[GeminiUploader] Processing file: ${file.name}, type: ${mimeType}`);
+          
           // Using the new OCR Service
           const extractedData = await extractBlockData(base64String, mimeType, section);
           
-          if (extractedData) {
+          if (extractedData && extractedData.success) {
+             console.log(`[GeminiUploader] Data extracted successfully:`, extractedData);
              onDataExtracted(extractedData);
           } else {
+             console.warn(`[GeminiUploader] No data extracted from document`);
              setError("OCR: Não foi possível identificar dados estruturados neste documento.");
           }
-        } catch (err) {
-          setError("Erro no processamento IA. Verifique conexão ou tente outro arquivo.");
-          console.error(err);
+        } catch (err: any) {
+          console.error(`[GeminiUploader] Error processing file:`, err);
+          const errorMsg = err?.message || "Erro desconhecido";
+          setError(`❌ ${errorMsg}. Tente um PDF com melhor qualidade.`);
         } finally {
           setLoading(false);
         }
@@ -59,10 +64,11 @@ export const GeminiUploader: React.FC<GeminiUploaderProps> = ({ section, onDataE
         <div className="relative">
              <input
                 type="file"
-                accept="image/*,application/pdf"
+                accept="application/pdf"
                 onChange={handleFileChange}
                 disabled={loading}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                title="Selecione um arquivo PDF"
             />
             <button disabled={loading} className={`px-4 py-2 rounded text-sm font-medium shadow transition-colors ${loading ? 'bg-indigo-300' : 'bg-indigo-600 hover:bg-indigo-700'} text-white`}>
                 {loading ? 'Lendo Documento...' : 'Upload PDF/Imagem'}
