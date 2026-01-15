@@ -2,10 +2,6 @@
   "buildCommand": "npm run build",
   "outputDirectory": "build",
   "regions": ["sfo1"],
-  "env": {
-    "GEMINI_API_KEY": "@GEMINI_API_KEY"
-  },
-  "envPrefix": "REACT_APP_",
   "headers": [
     {
       "source": "/(.*)",
