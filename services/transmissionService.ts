@@ -8,7 +8,7 @@ import { saveProtocol } from './protocolService';
  * Proxied in dev via /proxy-f5
  */
 
-const API_BASE = process.env.NODE_ENV === 'development'
+const API_BASE = typeof window !== 'undefined' && window.location.hostname === 'localhost'
   ? "/proxy-f5"
   : "https://audesp-piloto.tce.sp.gov.br/f5";
 

@@ -7,7 +7,7 @@ import { TokenResponse } from '../types';
  * Proxied in dev via /proxy-login
  */
 
-const API_BASE = process.env.NODE_ENV === 'development'
+const API_BASE = typeof window !== 'undefined' && window.location.hostname === 'localhost'
   ? "/proxy-login" 
   : "https://audesp-piloto.tce.sp.gov.br";
 
