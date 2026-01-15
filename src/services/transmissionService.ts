@@ -9,9 +9,21 @@ import { saveProtocol } from './protocolService';
  * IMPORTANTE: /f5 é NECESSÁRIO - faz parte da API oficial
  */
 
-const API_BASE = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+const API_BASE = isLocalhost
   ? "/proxy-f5"
   : "https://audesp-piloto.tce.sp.gov.br/f5";
+
+// Debug: Log environment detection
+if (typeof window !== 'undefined') {
+  console.log('[Transmission Init]', {
+    hostname: window.location.hostname,
+    isLocalhost: isLocalhost,
+    API_BASE: API_BASE,
+    protocol: window.location.protocol,
+    url: window.location.href
+  });
+}
 
 const ROUTE_MAP: Record<TipoDocumentoDescritor, string> = {
     "Prestação de Contas de Convênio": "/enviar-prestacao-contas-convenio",
@@ -127,10 +139,21 @@ export async function sendPrestacaoContas(token: string, data: PrestacaoContas):
     // Detailed error diagnostics for "Failed to fetch"
     let diagnosticMessage = "";
     
+    // CRITICAL: Check which URL was actually used
+    const wasUsingProxy = fullUrl.includes('/proxy-');
+    const wasUsingDirectHttps = fullUrl.includes('https://');
+    
     if (error.name === 'AbortError') {
       diagnosticMessage = `❌ TIMEOUT (30s): Servidor não respondeu em tempo hábil\n• Verifique se https://audesp-piloto.tce.sp.gov.br está online\n• Tente novamente em alguns segundos`;
     } else if (error.message?.includes('Failed to fetch')) {
-      diagnosticMessage = `❌ ERRO DE CONEXÃO (CORS/Network):\n• Servidor pode estar indisponível\n• Verificar se domínio está acessível: https://audesp-piloto.tce.sp.gov.br\n• Pode ser bloqueio de CORS do navegador\n• Tente em produção (não localhost)`;
+      // "Failed to fetch" can mean CORS, network error, or request failure
+      const urlInfo = wasUsingProxy 
+        ? "(via proxy - localhost)"
+        : wasUsingDirectHttps
+        ? "(CORS/direct HTTPS)"
+        : "(unknown URL)";
+      
+      diagnosticMessage = `❌ ERRO DE CONEXÃO (CORS/Network) ${urlInfo}:\n• Servidor pode estar indisponível\n• Verificar se domínio está acessível: https://audesp-piloto.tce.sp.gov.br\n• Pode ser bloqueio de CORS do navegador\n• Tente em produção (não localhost)`;
     } else if (error.message?.includes('NetworkError')) {
       diagnosticMessage = `❌ ERRO DE REDE:\n• Verifique sua conexão de internet\n• Tente novamente em alguns segundos\n• Se persistir, contate o administrador da rede`;
     } else if (error.message?.includes('TypeError')) {
@@ -142,8 +165,11 @@ export async function sendPrestacaoContas(token: string, data: PrestacaoContas):
     console.error(`[Transmission Diagnostic]\n${diagnosticMessage}`);
     console.error(`[Transmission Debug Info]`, {
       url: fullUrl,
+      isProxyURL: wasUsingProxy,
+      isDirectURL: wasUsingDirectHttps,
       method: 'POST',
       tokenPrefix: token?.substring(0, 10) + '...',
+      windowHostname: typeof window !== 'undefined' ? window.location.hostname : 'N/A',
       environment: process.env.NODE_ENV,
       errorName: error.name,
       errorMessage: error.message,

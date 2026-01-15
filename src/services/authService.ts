@@ -7,9 +7,21 @@ import { TokenResponse } from '../types';
  * Proxied in dev via /proxy-login
  */
 
-const API_BASE = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+const API_BASE = isLocalhost
   ? "/proxy-login" 
   : "https://audesp-piloto.tce.sp.gov.br";
+
+// Debug: Log environment detection
+if (typeof window !== 'undefined') {
+  console.log('[Auth Init]', {
+    hostname: window.location.hostname,
+    isLocalhost: isLocalhost,
+    API_BASE: API_BASE,
+    protocol: window.location.protocol,
+    url: window.location.href
+  });
+}
 
 const STORAGE_TOKEN_KEY = "audesp_token";
 const STORAGE_EXPIRY_KEY = "audesp_expire";
@@ -90,8 +102,25 @@ export async function login(usuario: string, senha: string): Promise<TokenRespon
   } catch (error: any) {
     console.error("[Auth Error]", error);
     
+    const wasUsingProxy = url.includes('/proxy-');
+    const wasUsingDirectHttps = url.includes('https://');
+    
     if (error.message && error.message.includes('Failed to fetch')) {
-        throw new Error("ERRO DE REDE LOCAL.\nFalha ao conectar via Proxy.\nVerifique se o servidor Audesp Piloto está online.");
+        const urlInfo = wasUsingProxy 
+          ? "(via proxy - localhost)"
+          : wasUsingDirectHttps
+          ? "(CORS/direct HTTPS)"
+          : "(unknown URL)";
+        
+        console.error("[Auth Debug]", {
+          url: url,
+          isProxyURL: wasUsingProxy,
+          isDirectURL: wasUsingDirectHttps,
+          windowHostname: typeof window !== 'undefined' ? window.location.hostname : 'N/A',
+          errorMessage: error.message
+        });
+        
+        throw new Error(`ERRO DE REDE LOCAL ${urlInfo}.\nFalha ao conectar via Proxy.\nVerifique se o servidor Audesp Piloto está online.`);
     }
     
     throw error;
