@@ -1,0 +1,5 @@
+{
+  "name": "Audesp Connect Phase V",
+  "description": "A comprehensive system for managing, generating, and transmitting Third Sector accountability reports (Prestação de Contas) to TCESP Audesp Phase V. Features AI-powered OCR for document data extraction.",
+  "requestFramePermissions": []
+}
