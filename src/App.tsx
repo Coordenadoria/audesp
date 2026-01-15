@@ -120,9 +120,12 @@ const App: React.FC = () => {
       setIsLoggingIn(true);
       setLoginError(null);
       try {
+          console.log('[App] Iniciando login...');
           const res = await login(loginEmail, loginPassword);
+          console.log('[App] Login bem-sucedido, token:', res.token.substring(0, 20) + '...');
           setAuthToken(res.token);
           setIsLoggedIn(true);
+          setActiveSection('dashboard');
           showToast("Login no Ambiente Piloto realizado!", "success");
           
           const draft = localStorage.getItem('audesp_draft');
@@ -130,7 +133,8 @@ const App: React.FC = () => {
              try { setFormData(JSON.parse(draft)); } catch {}
           }
       } catch (err: any) {
-          setLoginError(err.message);
+          console.error('[App] Erro no login:', err);
+          setLoginError(err.message || 'Erro desconhecido ao fazer login');
       } finally {
           setIsLoggingIn(false);
       }
@@ -358,6 +362,8 @@ const App: React.FC = () => {
     </div>
   );
 
+  console.log('[App] Renderizando com isLoggedIn:', isLoggedIn, 'activeSection:', activeSection);
+
   return (
       <Suspense fallback={<LoadingSpinner />}>
       <div className="flex bg-slate-100 min-h-screen font-sans text-slate-900">
@@ -388,13 +394,16 @@ const App: React.FC = () => {
               </header>
               <div className="max-w-6xl mx-auto pb-20">
                   {activeSection === 'dashboard' ? (
-                      <Dashboard 
-                        data={formData} 
-                        sectionStatus={sectionStatus} 
-                        onNavigate={setActiveSection} 
-                      />
+                      <Suspense fallback={<div className="text-center py-8">Carregando Dashboard...</div>}>
+                          <Dashboard 
+                            data={formData} 
+                            sectionStatus={sectionStatus} 
+                            onNavigate={setActiveSection} 
+                          />
+                      </Suspense>
                   ) : (
-                      <FormSections 
+                      <Suspense fallback={<div className="text-center py-8">Carregando formulário...</div>}>
+                          <FormSections 
                           activeSection={activeSection} 
                           formData={formData} 
                           updateField={updateField} 
@@ -404,6 +413,7 @@ const App: React.FC = () => {
                           handleExtraction={()=>{}} 
                           handleDownload={handleDownload} 
                       />
+                      </Suspense>
                   )}
               </div>
           </main>
