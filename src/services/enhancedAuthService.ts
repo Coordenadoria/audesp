@@ -19,18 +19,16 @@ export interface LoginCredentials {
 
 export interface AuthToken {
   token: string;
-  expires_in: number;
+  expire_in: number;
   token_type: string;
   environment: Environment;
   timestamp: number;
 }
 
-// Backend URLs
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
-
+// TCESP Real Servers
 const ENVIRONMENTS: Record<Environment, string> = {
-  piloto: BACKEND_URL,
-  producao: BACKEND_URL
+  piloto: 'https://audesp-piloto.tce.sp.gov.br',
+  producao: 'https://audesp.tce.sp.gov.br'
 };
 
 const STORAGE_KEY = 'audesp_auth_token';
@@ -60,7 +58,8 @@ export class EnhancedAuthService {
     const loginUrl = `${baseUrl}/login`;
 
     try {
-      console.log(`[Auth] Fazendo login em ${this.getEnvironment()} (${loginUrl})`);
+      console.log(`[Auth] Tentando login em ${this.getEnvironment()} (${loginUrl})`);
+      console.log(`[Auth] Email: ${credentials.email}`);
 
       // Formatar credenciais no formato esperado: email:senha
       const authHeader = `${credentials.email}:${credentials.password}`;
@@ -75,21 +74,31 @@ export class EnhancedAuthService {
         credentials: 'include'
       });
 
+      console.log(`[Auth] Response status: ${response.status}`);
+      const responseText = await response.text();
+      console.log(`[Auth] Response body: ${responseText.substring(0, 100)}`);
+
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`[Auth] Erro ${response.status}: ${errorText}`);
-        
+        // Erro real
         if (response.status === 401) {
-          throw new Error('Usuário ou senha inválidos');
+          throw new Error('❌ Usuário ou senha inválidos. Verifique suas credenciais TCESP.');
+        } else if (response.status === 403) {
+          throw new Error('❌ Acesso proibido. Seu usuário pode não ter permissão neste ambiente.');
         }
-        throw new Error(`Erro de autenticação: ${response.status}`);
+        throw new Error(`❌ Erro de autenticação: ${response.status}`);
       }
 
-      const data = await response.json();
+      const data = JSON.parse(responseText);
+      
+      // TCESP response uses "access_token" not "token"
+      // expire_in is a timestamp (milliseconds), not seconds
+      const tokenValue = data.access_token || data.token;
+      const expiresInMs = data.expire_in || data.expires_in || 0;
+      const expiresInSeconds = expiresInMs > 0 ? Math.floor((expiresInMs - Date.now()) / 1000) : 3600;
       
       const authToken: AuthToken = {
-        token: data.token,
-        expires_in: data.expire_in || 3600,
+        token: tokenValue,
+        expire_in: expiresInSeconds,
         token_type: data.token_type || 'bearer',
         environment: this.getEnvironment(),
         timestamp: Date.now()
@@ -99,7 +108,7 @@ export class EnhancedAuthService {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(authToken));
       this.currentToken = authToken;
 
-      console.log(`[Auth] Login bem-sucedido em ${this.getEnvironment()}`);
+      console.log(`[Auth] ✅ Login bem-sucedido em ${this.getEnvironment()}`);
       return authToken;
 
     } catch (error: any) {
