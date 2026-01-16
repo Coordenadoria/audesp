@@ -8,6 +8,9 @@ const Dashboard = lazy(() => import('./components/Dashboard').then(m => ({ defau
 const FullReportImporter = lazy(() => import('./components/FullReportImporter').then(m => ({ default: m.FullReportImporter })));
 const TransmissionResult = lazy(() => import('./components/TransmissionResult').then(m => ({ default: m.TransmissionResult })));
 const ReportsDashboard = lazy(() => import('./components/ReportsDashboard').then(m => ({ default: m })));
+const EnhancedLoginComponent = lazy(() => import('./components/EnhancedLoginComponent').then(m => ({ default: m })));
+const BatchPDFImporter = lazy(() => import('./components/BatchPDFImporter').then(m => ({ default: m })));
+const ValidationDashboard = lazy(() => import('./components/ValidationDashboard').then(m => ({ default: m })));
 
 const { login, logout, isAuthenticated, getToken } = (() => {
   try {
@@ -74,16 +77,23 @@ const App: React.FC = () => {
   // Validation State (Computed)
   const sectionStatus = useMemo(() => getAllSectionsStatus(formData), [formData]);
 
-  // Auth State
+  // Auth State - Enhanced with Environment
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [authToken, setAuthToken] = useState<string | null>(null);
+  const [authEnvironment, setAuthEnvironment] = useState<'piloto' | 'producao'>('piloto');
+  const [authEmail, setAuthEmail] = useState<string>('');
   
-  // Pre-filled credentials for testing
+  // Legacy login state
   const [loginEmail, setLoginEmail] = useState('afpereira@saude.sp.gov.br');
   const [loginPassword, setLoginPassword] = useState('M@dmax2026');
-  
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  // PDF Processing
+  const [showPDFImporter, setShowPDFImporter] = useState(false);
+
+  // Validation Dashboard
+  const [activeTab, setActiveTab] = useState<'form' | 'pdf' | 'validation'>('form');
 
   const authTokenRef = useRef<string | null>(authToken);
 
@@ -144,6 +154,29 @@ const App: React.FC = () => {
       logout();
       setAuthToken(null);
       setIsLoggedIn(false);
+      setAuthEmail('');
+      setAuthEnvironment('piloto');
+      setActiveTab('form');
+  };
+
+  // Enhanced Login Handler from EnhancedLoginComponent
+  const handleEnhancedLoginSuccess = (token: string, environment: 'piloto' | 'producao', email: string) => {
+      setAuthToken(token);
+      setAuthEnvironment(environment);
+      setAuthEmail(email);
+      setIsLoggedIn(true);
+      setActiveSection('dashboard');
+      setActiveTab('form');
+      showToast(`Login no ambiente ${environment} realizado com sucesso!`, "success");
+      
+      const draft = localStorage.getItem('audesp_draft');
+      if (draft) {
+         try { setFormData(JSON.parse(draft)); } catch {}
+      }
+  };
+
+  const handleEnhancedLoginError = (error: string) => {
+      showToast(error, "error");
   };
 
   const handleTransmit = () => {
@@ -326,30 +359,19 @@ const App: React.FC = () => {
 
   if (!isLoggedIn) {
       return (
-          <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center p-4">
-              <div className="w-full max-w-md bg-white rounded-xl shadow-lg border border-slate-200 p-8">
-                  <div className="text-center mb-6">
-                      <img src={LOGO_URL} className="h-16 mx-auto mb-2" alt="Logo" />
-                      <h1 className="text-xl font-bold text-slate-800">Audesp Connect - Piloto V</h1>
-                      <p className="text-xs text-slate-500 mt-2">Sistema de Prestação de Contas (v1.9.4)</p>
-                  </div>
-                  <form onSubmit={handleLoginSubmit} className="space-y-4">
-                      <div><label className="text-xs font-bold text-slate-500 uppercase">Email</label><input type="email" value={loginEmail} onChange={e=>setLoginEmail(e.target.value)} className="w-full h-10 px-3 border rounded" required placeholder="email@instituicao.org.br" /></div>
-                      <div><label className="text-xs font-bold text-slate-500 uppercase">Senha</label><input type="password" value={loginPassword} onChange={e=>setLoginPassword(e.target.value)} className="w-full h-10 px-3 border rounded" required /></div>
-                      {loginError && (
-                        <div className="bg-red-50 border border-red-200 rounded p-4 text-red-600 text-xs font-semibold">
-                            <strong className="block mb-1 text-red-700">Falha no Login:</strong>
-                            <span className="whitespace-pre-line leading-relaxed block">{loginError}</span>
-                        </div>
-                      )}
-                      <button type="submit" disabled={isLoggingIn} className="w-full bg-blue-600 hover:bg-blue-700 text-white h-10 rounded font-bold transition-colors shadow-sm disabled:opacity-70">{isLoggingIn ? 'Autenticando...' : 'Acessar Ambiente Piloto'}</button>
-                  </form>
-                  <div className="mt-8 text-center text-[10px] text-slate-400 border-t pt-4">
-                      <p>Ambiente Oficial: <span className="font-mono text-slate-600">audesp-piloto.tce.sp.gov.br</span></p>
-                      <p className="mt-2 text-yellow-600 bg-yellow-50 inline-block px-2 py-1 rounded">Nota: Reinicie 'npm start' se mudou o Proxy.</p>
+          <Suspense fallback={
+              <div className="flex items-center justify-center h-screen bg-slate-100">
+                  <div className="text-center">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                      <p className="text-slate-600">Carregando sistema...</p>
                   </div>
               </div>
-          </div>
+          }>
+              <EnhancedLoginComponent
+                  onLoginSuccess={handleEnhancedLoginSuccess}
+                  onError={handleEnhancedLoginError}
+              />
+          </Suspense>
       );
   }
 
@@ -364,9 +386,45 @@ const App: React.FC = () => {
 
   console.log('[App] Renderizando com isLoggedIn:', isLoggedIn, 'activeSection:', activeSection);
 
+  // Tab Navigation Component
+  const TabNavigation = () => (
+    <div className="flex gap-2 border-b border-slate-200 mb-6 bg-white rounded-t-lg p-4">
+      <button
+        onClick={() => setActiveTab('form')}
+        className={`px-6 py-3 font-semibold rounded-t-lg transition-all ${
+          activeTab === 'form'
+            ? 'bg-blue-600 text-white shadow-md'
+            : 'text-slate-600 hover:text-slate-900 border-b-2 border-transparent hover:border-blue-400'
+        }`}
+      >
+        📋 Formulário
+      </button>
+      <button
+        onClick={() => setActiveTab('pdf')}
+        className={`px-6 py-3 font-semibold rounded-t-lg transition-all ${
+          activeTab === 'pdf'
+            ? 'bg-blue-600 text-white shadow-md'
+            : 'text-slate-600 hover:text-slate-900 border-b-2 border-transparent hover:border-blue-400'
+        }`}
+      >
+        📄 PDFs (IA)
+      </button>
+      <button
+        onClick={() => setActiveTab('validation')}
+        className={`px-6 py-3 font-semibold rounded-t-lg transition-all ${
+          activeTab === 'validation'
+            ? 'bg-blue-600 text-white shadow-md'
+            : 'text-slate-600 hover:text-slate-900 border-b-2 border-transparent hover:border-blue-400'
+        }`}
+      >
+        ✓ Validação
+      </button>
+    </div>
+  );
+
   return (
       <Suspense fallback={<LoadingSpinner />}>
-      <div className="flex bg-slate-100 min-h-screen font-sans text-slate-900">
+      <div className="flex bg-slate-50 min-h-screen font-sans text-slate-900">
           <Sidebar
             activeSection={activeSection} 
             setActiveSection={setActiveSection} 
@@ -382,31 +440,92 @@ const App: React.FC = () => {
             sectionStatus={sectionStatus}
           />
           <main className="flex-1 ml-64 p-8">
-              <header className="flex justify-between items-center mb-8">
+              <header className="flex justify-between items-center mb-8 bg-white rounded-lg p-6 shadow-sm border border-slate-200">
                   <div>
-                      <h1 className="text-2xl font-bold text-slate-800">Prestação de Contas</h1>
-                      <p className="text-sm text-slate-500">Audesp Fase V - Piloto Oficial</p>
+                      <h1 className="text-3xl font-bold text-slate-800">Prestação de Contas</h1>
+                      <p className="text-sm text-slate-500 mt-1">
+                          Audesp Fase V - {authEnvironment === 'piloto' ? '🧪 Ambiente Piloto' : '🚀 Ambiente Produção'} | {authEmail}
+                      </p>
                   </div>
                   <div className="flex items-center gap-4">
-                     <span className="text-xs text-green-600 font-bold bg-green-50 px-2 py-1 rounded border border-green-200">● Conectado ao Piloto</span>
-                     <button onClick={handleLogout} className="text-red-600 font-bold text-sm bg-red-50 hover:bg-red-100 px-4 py-2 rounded transition-colors border border-red-100">SAIR</button>
+                     <div className="text-right">
+                        <span className={`text-xs font-bold px-3 py-1 rounded-full border ${
+                            authEnvironment === 'piloto'
+                            ? 'bg-blue-50 text-blue-600 border-blue-200'
+                            : 'bg-red-50 text-red-600 border-red-200'
+                        }`}>
+                            {authEnvironment === 'piloto' ? '● Piloto (Teste)' : '● Produção (Real)'}
+                        </span>
+                     </div>
+                     <button onClick={handleLogout} className="text-red-600 font-bold text-sm bg-red-50 hover:bg-red-100 px-4 py-2 rounded transition-colors border border-red-100">
+                         SAIR
+                     </button>
                   </div>
               </header>
-              <div className="max-w-6xl mx-auto pb-20">
+
+              <div className="max-w-7xl mx-auto pb-20">
+                  {/* Main Tab Navigation */}
+                  {activeSection === 'dashboard' && <TabNavigation />}
+
+                  {/* Dashboard View */}
                   {activeSection === 'dashboard' ? (
-                      <Suspense fallback={<div className="text-center py-8">Carregando Dashboard...</div>}>
-                          <Dashboard 
-                            data={formData} 
-                            sectionStatus={sectionStatus} 
-                            onNavigate={setActiveSection} 
-                          />
-                      </Suspense>
+                      <div className="bg-white rounded-lg shadow-sm border border-slate-200">
+                          {activeTab === 'form' && (
+                              <div className="p-6">
+                                  <Suspense fallback={<div className="text-center py-8">Carregando formulário...</div>}>
+                                      <FormSections 
+                                          activeSection={activeSection} 
+                                          formData={formData} 
+                                          updateField={updateField} 
+                                          updateItem={updateItem} 
+                                          addItem={addItem} 
+                                          removeItem={removeItem} 
+                                          handleExtraction={()=>{}} 
+                                          handleDownload={handleDownload} 
+                                      />
+                                  </Suspense>
+                              </div>
+                          )}
+
+                          {activeTab === 'pdf' && (
+                              <div className="p-6">
+                                  <div className="mb-6">
+                                      <h2 className="text-2xl font-bold text-slate-800 mb-2">🤖 Processamento de PDFs com IA Avançada</h2>
+                                      <p className="text-slate-600">Envie múltiplos PDFs e deixe o Claude 3.5 Sonnet classificar e extrair dados automaticamente</p>
+                                  </div>
+                                  <Suspense fallback={<div className="text-center py-8">Carregando importador...</div>}>
+                                      <BatchPDFImporter
+                                          formData={formData}
+                                          onDocumentsProcessed={(results) => {
+                                              console.log('PDFs processados:', results);
+                                              showToast(`${results.totalFiles} arquivos processados com sucesso!`, "success");
+                                          }}
+                                          onApplySuggestions={(field, value) => {
+                                              updateField(field, value);
+                                              showToast(`Campo ${field} preenchido automaticamente!`, "success");
+                                          }}
+                                      />
+                                  </Suspense>
+                              </div>
+                          )}
+
+                          {activeTab === 'validation' && (
+                              <div className="p-6">
+                                  <Suspense fallback={<div className="text-center py-8">Carregando validação...</div>}>
+                                      <ValidationDashboard
+                                          formData={formData}
+                                          userId={authEmail}
+                                      />
+                                  </Suspense>
+                              </div>
+                          )}
+                      </div>
                   ) : activeSection === 'reports' ? (
                       <Suspense fallback={<div className="text-center py-8">Carregando Dashboard de Relatórios...</div>}>
                           <ReportsDashboard 
                             formData={formData} 
                             setFormData={setFormData} 
-                            userId={loginEmail}
+                            userId={authEmail}
                           />
                       </Suspense>
                   ) : (
@@ -427,8 +546,8 @@ const App: React.FC = () => {
           </main>
           
           {notification && (
-              <div className={`fixed top-4 right-4 z-50 px-6 py-4 rounded shadow-xl border-l-4 ${notification.type === 'error' ? 'bg-white border-red-500 text-red-700' : 'bg-white border-green-500 text-green-700'}`}>
-                  {notification.message}
+              <div className={`fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-xl border-l-4 animate-in fade-in slide-in-from-right ${notification.type === 'error' ? 'bg-white border-red-500 text-red-700' : notification.type === 'success' ? 'bg-white border-green-500 text-green-700' : 'bg-white border-blue-500 text-blue-700'}`}>
+                  <p className="font-semibold">{notification.message}</p>
               </div>
           )}
 
