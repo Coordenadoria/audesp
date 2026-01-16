@@ -42,8 +42,9 @@ const ROUTE_MAP: Record<TipoDocumentoDescritor, string> = {
  * Envia a prestação de contas completa para o Audesp Piloto.
  * @param token Token JWT Bearer obtido no login
  * @param data Objeto PrestacaoContas completo
+ * @param cpf CPF do usuário autenticado
  */
-export async function sendPrestacaoContas(token: string, data: PrestacaoContas): Promise<AudespResponse> {
+export async function sendPrestacaoContas(token: string, data: PrestacaoContas, cpf?: string): Promise<AudespResponse> {
   const tipoDoc = data.descritor.tipo_documento;
   const endpoint = ROUTE_MAP[tipoDoc];
 
@@ -72,7 +73,8 @@ export async function sendPrestacaoContas(token: string, data: PrestacaoContas):
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
-        'Accept': 'application/json'
+        'Accept': 'application/json',
+        ...(cpf && { 'X-User-CPF': cpf })
       },
       body: formData,
       credentials: 'include',

@@ -37,7 +37,7 @@ const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [authEnvironment, setAuthEnvironment] = useState<'piloto' | 'producao'>('piloto');
-  const [authEmail, setAuthEmail] = useState<string>('');
+  const [authCpf, setAuthCpf] = useState<string>('');
   
 
 
@@ -102,16 +102,16 @@ const App: React.FC = () => {
       logout();
       setAuthToken(null);
       setIsLoggedIn(false);
-      setAuthEmail('');
+      setAuthCpf('');
       setAuthEnvironment('piloto');
       setActiveTab('form');
   };
 
   // Enhanced Login Handler from EnhancedLoginComponent
-  const handleEnhancedLoginSuccess = (token: string, environment: 'piloto' | 'producao', email: string) => {
+  const handleEnhancedLoginSuccess = (token: string, environment: 'piloto' | 'producao', cpf: string) => {
       setAuthToken(token);
       setAuthEnvironment(environment);
-      setAuthEmail(email);
+      setAuthCpf(cpf);
       setIsLoggedIn(true);
       setActiveSection('dashboard');
       setActiveTab('form');
@@ -153,8 +153,8 @@ const App: React.FC = () => {
 
               setTransmissionLog(prev => [...prev, "Validação OK. Enviando JSON para API Piloto Audesp..."]);
               
-              // Call the new service
-              const res = await sendPrestacaoContas(authTokenRef.current, formData);
+              // Call the new service with CPF
+              const res = await sendPrestacaoContas(authTokenRef.current, formData, authCpf);
               
               // Handle Audesp Logic Status
               if (res.status === 'Rejeitado') {
@@ -375,7 +375,7 @@ const App: React.FC = () => {
                   <div>
                       <h1 className="text-3xl font-bold text-slate-800">Prestação de Contas</h1>
                       <p className="text-sm text-slate-500 mt-1">
-                          Audesp Fase V - {authEnvironment === 'piloto' ? '🧪 Ambiente Piloto' : '🚀 Ambiente Produção'} | {authEmail}
+                          Audesp Fase V - {authEnvironment === 'piloto' ? '🧪 Ambiente Piloto' : '🚀 Ambiente Produção'} | CPF: {authCpf}
                       </p>
                   </div>
                   <div className="flex items-center gap-4">

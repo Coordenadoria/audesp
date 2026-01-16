@@ -7,7 +7,7 @@ import React, { useState } from 'react';
 import EnhancedAuthService, { Environment } from '../services/enhancedAuthService';
 
 interface LoginProps {
-  onLoginSuccess: (token: string, environment: Environment) => void;
+  onLoginSuccess: (token: string, environment: Environment, cpf: string) => void;
   onError: (error: string) => void;
 }
 
@@ -16,7 +16,7 @@ export const EnhancedLoginComponent: React.FC<LoginProps> = ({
   onError
 }) => {
   const [environment, setEnvironment] = useState<Environment>('piloto');
-  const [email, setEmail] = useState('afpereira@saude.sp.gov.br');
+  const [cpf, setCpf] = useState('22586034805');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -30,8 +30,8 @@ export const EnhancedLoginComponent: React.FC<LoginProps> = ({
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!email || !password) {
-      onError('E-mail e senha são obrigatórios');
+    if (!cpf || !password) {
+      onError('CPF e senha são obrigatórios');
       return;
     }
 
@@ -39,17 +39,17 @@ export const EnhancedLoginComponent: React.FC<LoginProps> = ({
 
     try {
       const token = await EnhancedAuthService.login({
-        email,
+        cpf,
         password
       });
 
       // Salvar preferência de ambiente
       if (rememberMe) {
         localStorage.setItem('audesp_last_environment', environment);
-        localStorage.setItem('audesp_last_email', email);
+        localStorage.setItem('audesp_last_cpf', cpf);
       }
 
-      onLoginSuccess(token.token, environment);
+      onLoginSuccess(token.token, environment, cpf);
     } catch (error: any) {
       onError(error.message || 'Erro ao fazer login');
     } finally {
@@ -134,16 +134,16 @@ export const EnhancedLoginComponent: React.FC<LoginProps> = ({
 
           {/* FORMULÁRIO */}
           <form onSubmit={handleLogin} className="space-y-4">
-            {/* EMAIL */}
+            {/* CPF */}
             <div>
               <label className="block text-xs font-bold uppercase text-slate-600 mb-2">
-                E-mail
+                CPF
               </label>
               <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="seu.email@saude.sp.gov.br"
+                type="text"
+                value={cpf}
+                onChange={(e) => setCpf(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                placeholder="123.456.789-00"
                 className="w-full h-11 px-4 border border-slate-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition text-slate-700 placeholder:text-slate-400"
                 disabled={isLoading}
                 required
@@ -189,7 +189,7 @@ export const EnhancedLoginComponent: React.FC<LoginProps> = ({
                 htmlFor="rememberMe"
                 className="text-sm text-slate-600 cursor-pointer"
               >
-                Lembrar ambiente e e-mail
+                Lembrar ambiente e CPF
               </label>
             </div>
 

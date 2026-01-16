@@ -13,7 +13,7 @@ export interface AuthConfig {
 }
 
 export interface LoginCredentials {
-  email: string;
+  cpf: string;
   password: string;
 }
 
@@ -59,10 +59,10 @@ export class EnhancedAuthService {
 
     try {
       console.log(`[Auth] Tentando login em ${this.getEnvironment()} (${loginUrl})`);
-      console.log(`[Auth] Email: ${credentials.email}`);
+      console.log(`[Auth] CPF: ${credentials.cpf}`);
 
-      // Formatar credenciais no formato esperado: email:senha
-      const authHeader = `${credentials.email}:${credentials.password}`;
+      // Formatar credenciais no formato esperado: cpf:senha
+      const authHeader = `${credentials.cpf}:${credentials.password}`;
 
       const response = await fetch(loginUrl, {
         method: 'POST',
