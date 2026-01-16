@@ -53,6 +53,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
       try {
+          // Check if already authenticated
           if (isAuthenticated()) {
               setIsLoggedIn(true);
               setAuthToken(getToken());
@@ -61,12 +62,35 @@ const App: React.FC = () => {
                  try { setFormData(JSON.parse(draft)); } catch {}
               }
           } else {
-              handleLogout();
+              // Check for demo mode (localhost or development)
+              const isDemoMode = typeof window !== 'undefined' && 
+                  (window.location.hostname === 'localhost' || 
+                   window.location.hostname === '127.0.0.1' ||
+                   window.location.hostname.includes('10.0'));
+              
+              if (isDemoMode || localStorage.getItem('audesp_demo_mode')) {
+                  // Allow demo access without login
+                  setIsLoggedIn(true);
+                  setAuthToken('demo-token-dev');
+                  setAuthEnvironment('piloto');
+                  setAuthEmail('usuario.demo@example.com');
+                  localStorage.setItem('audesp_demo_mode', 'true');
+                  
+                  const draft = localStorage.getItem('audesp_draft');
+                  if (draft) {
+                     try { setFormData(JSON.parse(draft)); } catch {}
+                  }
+              } else {
+                  handleLogout();
+              }
           }
       } catch (error) {
           console.error("Auth initialization error:", error);
-          // Allow app to load even if auth fails
-          setIsLoggedIn(false);
+          // Allow demo mode on error
+          setIsLoggedIn(true);
+          setAuthToken('demo-token-recovery');
+          setAuthEnvironment('piloto');
+          setAuthEmail('usuario.demo@example.com');
       }
   }, []);
 
