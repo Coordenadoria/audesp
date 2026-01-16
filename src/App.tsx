@@ -1,6 +1,10 @@
 
 import React, { useState, useEffect, useRef, useMemo, Suspense, lazy } from 'react';
 import { INITIAL_DATA, PrestacaoContas, AudespResponse } from './types';
+import { logout, isAuthenticated, getToken } from './services/authService';
+import { sendPrestacaoContas } from './services/transmissionService';
+import { validatePrestacaoContas, getAllSectionsStatus, validateConsistency } from './services/validationService';
+import { downloadJson, loadJson } from './services/fileService';
 
 const Sidebar = lazy(() => import('./components/Sidebar').then(m => ({ default: m.Sidebar })));
 const FormSections = lazy(() => import('./components/FormSections').then(m => ({ default: m.FormSections })));
@@ -10,49 +14,6 @@ const ReportsDashboard = lazy(() => import('./components/ReportsDashboard').then
 const EnhancedLoginComponent = lazy(() => import('./components/EnhancedLoginComponent').then(m => ({ default: m })));
 const BatchPDFImporter = lazy(() => import('./components/BatchPDFImporter').then(m => ({ default: m })));
 const ValidationDashboard = lazy(() => import('./components/ValidationDashboard').then(m => ({ default: m })));
-
-const { logout, isAuthenticated, getToken } = (() => {
-  try {
-    return require('./services/authService');
-  } catch {
-    return {
-      logout: () => {},
-      isAuthenticated: () => false,
-      getToken: () => null
-    };
-  }
-})();
-
-const { sendPrestacaoContas } = (() => {
-  try {
-    return require('./services/transmissionService');
-  } catch {
-    return { sendPrestacaoContas: async () => ({}) };
-  }
-})();
-
-const { validatePrestacaoContas, getAllSectionsStatus, validateConsistency } = (() => {
-  try {
-    return require('./services/validationService');
-  } catch {
-    return {
-      validatePrestacaoContas: () => [],
-      getAllSectionsStatus: () => ({}),
-      validateConsistency: () => []
-    };
-  }
-})();
-
-const { downloadJson, loadJson } = (() => {
-  try {
-    return require('./services/fileService');
-  } catch {
-    return {
-      downloadJson: () => {},
-      loadJson: async () => ({})
-    };
-  }
-})();
 
 interface Notification {
     message: string;
