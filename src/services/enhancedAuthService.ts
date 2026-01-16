@@ -50,11 +50,19 @@ export class EnhancedAuthService {
 
   static getBaseUrl(): string {
     const env = this.getEnvironment();
+    const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+    
+    // Em localhost, usar proxy para evitar CORS
+    if (isLocalhost) {
+      return '/proxy-login'; // Sem '/login' aqui - será adicionado no método login()
+    }
+    
     return ENVIRONMENTS[env];
   }
 
   static async login(credentials: LoginCredentials): Promise<AuthToken> {
-    const baseUrl = this.getBaseUrl();
+    const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+    const baseUrl = isLocalhost ? '/proxy-login' : this.getBaseUrl();
     const loginUrl = `${baseUrl}/login`;
 
     try {
