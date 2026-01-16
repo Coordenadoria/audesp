@@ -127,7 +127,7 @@ export function detectPatterns(text: string): ExtractedData {
   console.log('[OCR] CPFs detectados:', data.cpfs);
   
   // Padrão: Datas (DD/MM/YYYY ou YYYY-MM-DD)
-  const dataMatches = text.matchAll(/(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2})/g);
+  const dataMatches = text.matchAll(/(\d{1,2}[-/]\d{1,2}[-/]\d{4}|\d{4}[-/]\d{1,2}[-/]\d{1,2})/g);
   for (const match of dataMatches) {
     const data_formatada = parseDate(match[1]);
     if (data_formatada && !data.datas!.includes(data_formatada)) {
@@ -237,7 +237,7 @@ function cleanCPF(cpf: string): string {
 function parseDate(dateStr: string): string | null {
   try {
     // Tenta YYYY-MM-DD
-    if (dateStr.match(/\d{4}[\/\-]\d{2}[\/\-]\d{2}/)) {
+    if (dateStr.match(/\d{4}[-/]\d{2}[-/]\d{2}/)) {
       const [year, month, day] = dateStr.replace(/\//g, '-').split('-');
       return `${year}-${month}-${day}`;
     }

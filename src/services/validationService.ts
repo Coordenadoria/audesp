@@ -277,14 +277,12 @@ export function validateConsistency(data: PrestacaoContas): string[] {
     // 1. Totais
     const totalPagamentos = data.pagamentos?.reduce((acc, cur) => acc + (cur.pagamento_valor || 0), 0) || 0;
     const totalDevolucoes = data.devolucoes?.reduce((acc, cur) => acc + (cur.valor || 0), 0) || 0;
-    const totalDespesas = totalPagamentos + totalDevolucoes;
 
     const totalRepasses = data.receitas?.repasses_recebidos?.reduce((acc, cur) => acc + (cur.valor || 0), 0) || 0;
     const totalOutrasReceitas = (data.receitas?.outras_receitas?.reduce((acc, cur) => acc + (cur.valor || 0), 0) || 0) +
                                 (data.receitas?.receitas_aplic_financ_repasses_publicos_municipais || 0) +
                                 (data.receitas?.receitas_aplic_financ_repasses_publicos_estaduais || 0) +
                                 (data.receitas?.receitas_aplic_financ_repasses_publicos_federais || 0);
-    const totalReceitas = totalRepasses + totalOutrasReceitas;
 
     const totalSaldoBancario = data.disponibilidades?.saldos.reduce((acc, cur) => acc + (cur.saldo_bancario || 0), 0) || 0;
 

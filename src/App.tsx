@@ -66,7 +66,6 @@ const App: React.FC = () => {
   const [transmissionLog, setTransmissionLog] = useState<string[]>([]);
   const [showTransmissionModal, setShowTransmissionModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
-  const [transmissionStatus, setTransmissionStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
   const [notification, setNotification] = useState<Notification | null>(null);
   
   // New State for Detailed Result

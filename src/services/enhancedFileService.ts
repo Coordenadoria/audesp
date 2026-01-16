@@ -5,7 +5,7 @@
 
 import { PrestacaoContas, INITIAL_DATA } from '../types';
 import { ComprehensiveValidator } from './advancedValidationService';
-import { AuditLogger, ChangeTracker } from './auditService';
+import { AuditLogger } from './auditService';
 
 // ==================== TIPOS ====================
 
@@ -437,8 +437,10 @@ export class BackupService {
 }
 
 // Exportar classes principais
-export default {
+const fileExports = {
   ExportService,
   ImportService,
   BackupService
 };
+
+export default fileExports;

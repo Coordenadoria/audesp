@@ -35,10 +35,6 @@ export const ReportsDashboard: React.FC<DashboardProps> = ({ formData, setFormDa
     return validatePrestacaoContas(formData);
   }, [formData]);
 
-  const consistencyReport = useMemo(() => {
-    return generateConsistencyReport(formData);
-  }, [formData]);
-
   const handleValidate = useCallback(() => {
     AuditLogger.logValidation(!validationResult.isValid, validationResult.errors.length, userId);
     setMessage({

@@ -10,9 +10,8 @@
  * - Export em PDF e HTML
  */
 
-import { PrestacaoContas, Descritor } from '../types';
+import { PrestacaoContas } from '../types';
 import { ValidationResult } from './advancedValidationService';
-import { AuditReport } from './auditService';
 
 // ==================== TIPOS ====================
 
@@ -649,7 +648,9 @@ export class ReportDownloader {
 }
 
 // Exportar classes principais
-export default {
+const reportExports = {
   ExecutiveReportGenerator,
   ReportDownloader
 };
+
+export default reportExports;

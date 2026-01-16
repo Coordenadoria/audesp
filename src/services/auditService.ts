@@ -595,9 +595,11 @@ export class AuditReportGenerator {
 }
 
 // Exportar principais classes
-export default {
+const auditExports = {
   AuditLogger,
   ChangeTracker,
   IntegrityChecker,
   AuditReportGenerator
 };
+
+export default auditExports;
