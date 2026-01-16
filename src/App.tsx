@@ -1,19 +1,18 @@
 
-import React, { useState, useEffect, useRef, useMemo, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { INITIAL_DATA, PrestacaoContas, AudespResponse } from './types';
 import { logout, isAuthenticated, getToken } from './services/authService';
 import { sendPrestacaoContas } from './services/transmissionService';
 import { validatePrestacaoContas, getAllSectionsStatus, validateConsistency } from './services/validationService';
 import { downloadJson, loadJson } from './services/fileService';
-
-const Sidebar = lazy(() => import('./components/Sidebar').then(m => ({ default: m.Sidebar })));
-const FormSections = lazy(() => import('./components/FormSections').then(m => ({ default: m.FormSections })));
-const FullReportImporter = lazy(() => import('./components/FullReportImporter').then(m => ({ default: m.FullReportImporter })));
-const TransmissionResult = lazy(() => import('./components/TransmissionResult').then(m => ({ default: m.TransmissionResult })));
-const ReportsDashboard = lazy(() => import('./components/ReportsDashboard').then(m => ({ default: m })));
-const EnhancedLoginComponent = lazy(() => import('./components/EnhancedLoginComponent').then(m => ({ default: m })));
-const BatchPDFImporter = lazy(() => import('./components/BatchPDFImporter').then(m => ({ default: m })));
-const ValidationDashboard = lazy(() => import('./components/ValidationDashboard').then(m => ({ default: m })));
+import { Sidebar } from './components/Sidebar';
+import { FormSections } from './components/FormSections';
+import { FullReportImporter } from './components/FullReportImporter';
+import { TransmissionResult } from './components/TransmissionResult';
+import ReportsDashboard from './components/ReportsDashboard';
+import EnhancedLoginComponent from './components/EnhancedLoginComponent';
+import BatchPDFImporter from './components/BatchPDFImporter';
+import ValidationDashboard from './components/ValidationDashboard';
 
 interface Notification {
     message: string;
@@ -308,30 +307,14 @@ const App: React.FC = () => {
 
   if (!isLoggedIn) {
       return (
-          <Suspense fallback={
-              <div className="flex items-center justify-center h-screen bg-slate-100">
-                  <div className="text-center">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                      <p className="text-slate-600">Carregando sistema...</p>
-                  </div>
-              </div>
-          }>
+          <div className="flex items-center justify-center h-screen bg-slate-100">
               <EnhancedLoginComponent
                   onLoginSuccess={handleEnhancedLoginSuccess}
                   onError={handleEnhancedLoginError}
               />
-          </Suspense>
+          </div>
       );
   }
-
-  const LoadingSpinner = () => (
-    <div className="flex items-center justify-center h-screen bg-slate-100">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-        <p className="text-slate-600">Carregando aplicação...</p>
-      </div>
-    </div>
-  );
 
   console.log('[App] Renderizando com isLoggedIn:', isLoggedIn, 'activeSection:', activeSection);
 
@@ -372,7 +355,6 @@ const App: React.FC = () => {
   );
 
   return (
-      <Suspense fallback={<LoadingSpinner />}>
       <div className="flex bg-slate-50 min-h-screen font-sans text-slate-900">
           <Sidebar
             activeSection={activeSection} 
@@ -421,18 +403,16 @@ const App: React.FC = () => {
                       <div className="bg-white rounded-lg shadow-sm border border-slate-200">
                           {activeTab === 'form' && (
                               <div className="p-6">
-                                  <Suspense fallback={<div className="text-center py-8">Carregando formulário...</div>}>
-                                      <FormSections 
-                                          activeSection={activeSection} 
-                                          formData={formData} 
-                                          updateField={updateField} 
-                                          updateItem={updateItem} 
-                                          addItem={addItem} 
-                                          removeItem={removeItem} 
-                                          handleExtraction={()=>{}} 
-                                          handleDownload={handleDownload} 
-                                      />
-                                  </Suspense>
+                                  <FormSections 
+                                      activeSection={activeSection} 
+                                      formData={formData} 
+                                      updateField={updateField} 
+                                      updateItem={updateItem} 
+                                      addItem={addItem} 
+                                      removeItem={removeItem} 
+                                      handleExtraction={()=>{}} 
+                                      handleDownload={handleDownload} 
+                                  />
                               </div>
                           )}
 
@@ -442,54 +422,46 @@ const App: React.FC = () => {
                                       <h2 className="text-2xl font-bold text-slate-800 mb-2">🤖 Processamento de PDFs com IA Avançada</h2>
                                       <p className="text-slate-600">Envie múltiplos PDFs e deixe o Claude 3.5 Sonnet classificar e extrair dados automaticamente</p>
                                   </div>
-                                  <Suspense fallback={<div className="text-center py-8">Carregando importador...</div>}>
-                                      <BatchPDFImporter
-                                          formData={formData}
-                                          onDocumentsProcessed={(results) => {
-                                              console.log('PDFs processados:', results);
-                                              showToast(`${results.totalFiles} arquivos processados com sucesso!`, "success");
-                                          }}
-                                          onApplySuggestions={(field, value) => {
-                                              updateField(field, value);
-                                              showToast(`Campo ${field} preenchido automaticamente!`, "success");
-                                          }}
-                                      />
-                                  </Suspense>
+                                  <BatchPDFImporter
+                                      formData={formData}
+                                      onDocumentsProcessed={(results) => {
+                                          console.log('PDFs processados:', results);
+                                          showToast(`${results.totalFiles} arquivos processados com sucesso!`, "success");
+                                      }}
+                                      onApplySuggestions={(field, value) => {
+                                          updateField(field, value);
+                                          showToast(`Campo ${field} preenchido automaticamente!`, "success");
+                                      }}
+                                  />
                               </div>
                           )}
 
                           {activeTab === 'validation' && (
                               <div className="p-6">
-                                  <Suspense fallback={<div className="text-center py-8">Carregando validação...</div>}>
-                                      <ValidationDashboard
-                                          formData={formData}
-                                          userId={authEmail}
-                                      />
-                                  </Suspense>
+                                  <ValidationDashboard
+                                      formData={formData}
+                                      userId={authEmail}
+                                  />
                               </div>
                           )}
                       </div>
                   ) : activeSection === 'reports' ? (
-                      <Suspense fallback={<div className="text-center py-8">Carregando Dashboard de Relatórios...</div>}>
-                          <ReportsDashboard 
-                            formData={formData} 
-                            setFormData={setFormData} 
-                            userId={authEmail}
-                          />
-                      </Suspense>
-                  ) : (
-                      <Suspense fallback={<div className="text-center py-8">Carregando formulário...</div>}>
-                          <FormSections 
-                          activeSection={activeSection} 
-                          formData={formData} 
-                          updateField={updateField} 
-                          updateItem={updateItem} 
-                          addItem={addItem} 
-                          removeItem={removeItem} 
-                          handleExtraction={()=>{}} 
-                          handleDownload={handleDownload} 
+                      <ReportsDashboard 
+                        formData={formData} 
+                        setFormData={setFormData} 
+                        userId={authEmail}
                       />
-                      </Suspense>
+                  ) : (
+                      <FormSections 
+                      activeSection={activeSection} 
+                      formData={formData} 
+                      updateField={updateField} 
+                      updateItem={updateItem} 
+                      addItem={addItem} 
+                      removeItem={removeItem} 
+                      handleExtraction={()=>{}} 
+                      handleDownload={handleDownload} 
+                  />
                   )}
               </div>
           </main>
@@ -529,7 +501,6 @@ const App: React.FC = () => {
               />
           )}
       </div>
-      </Suspense>
   );
 };
 
