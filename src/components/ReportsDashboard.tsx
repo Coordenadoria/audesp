@@ -7,7 +7,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { PrestacaoContas } from '../types';
 
 // Importar validadores
-import { validatePrestacaoContas, generateConsistencyReport } from '../services/advancedValidationService';
+import { validatePrestacaoContas } from '../services/advancedValidationService';
 
 // Importar auditoria
 import { AuditLogger, IntegrityChecker, AuditReportGenerator } from '../services/auditService';

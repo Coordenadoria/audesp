@@ -15,12 +15,6 @@ export const TransmissionResult: React.FC<Props> = ({ result, onClose, formData 
     const isWarning = result.status === 'Armazenado';
     const isError = result.status === 'Rejeitado';
 
-    const getBgColor = () => {
-        if (isSuccess) return 'bg-green-50 border-green-200';
-        if (isWarning) return 'bg-yellow-50 border-yellow-200';
-        return 'bg-red-50 border-red-200';
-    };
-
     const getTitle = () => {
         if (isSuccess) return 'SUCESSO: DOCUMENTO RECEBIDO';
         if (isWarning) return 'ATENÇÃO: DOCUMENTO ARMAZENADO COM RESSALVAS';

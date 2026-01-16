@@ -1,6 +1,6 @@
 import React from 'react';
 import { PrestacaoContas } from '../types';
-import { getMissingFieldsForTransmission, MissingFieldsReport } from '../services/validationService';
+import { getMissingFieldsForTransmission } from '../services/validationService';
 
 interface MissingFieldsPanelProps {
   data: PrestacaoContas;

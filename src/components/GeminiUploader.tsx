@@ -10,11 +10,10 @@ interface GeminiUploaderProps {
 export const GeminiUploader: React.FC<GeminiUploaderProps> = ({ section, onDataExtracted }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [backendAvailable, setBackendAvailable] = useState(true);
 
   // Check backend availability on mount
   React.useEffect(() => {
-    checkBackendHealth().then(setBackendAvailable);
+    checkBackendHealth();
   }, []);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {

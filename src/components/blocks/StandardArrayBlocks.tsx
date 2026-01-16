@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { ArrayBlock, Field, CLS, SectionHeader } from '../ui/BlockBase';
-import { PrestacaoContas, Empenho, Repasse, Receitas, Contrato, DocumentoFiscal, Pagamento, AjustesSaldo, ItemFinanceiro, Disponibilidades, RelacaoBens } from '../../schemas/type-definitions';
 
 // --- 5. Relação de Bens ---
 export const BensBlock = ({ data, onUpdate, onAdd, onRemove }: any) => {

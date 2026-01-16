@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Field, CLS, SectionHeader, ArrayBlock } from '../ui/BlockBase';
+import { Field, CLS, SectionHeader } from '../ui/BlockBase';
 import { PrestacaoContas, ParecerConclusivo, DemonstracoesContabeis } from '../../schemas/type-definitions';
 
 // --- 26. Parecer Conclusivo ---

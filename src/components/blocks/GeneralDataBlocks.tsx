@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Field, CLS, SectionHeader, ArrayBlock } from '../ui/BlockBase';
+import { Field, CLS, SectionHeader } from '../ui/BlockBase';
 import { PrestacaoContas, DadosGerais, Responsaveis, Declaracoes } from '../../schemas/type-definitions';
 import { PDFUploader } from '../PDFUploader';
 import { mapExtractedDataToForm } from '../../services/ocrService';

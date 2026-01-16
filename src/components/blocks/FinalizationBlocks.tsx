@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Field, CLS, SectionHeader, ArrayBlock } from '../ui/BlockBase';
+import { Field, CLS, SectionHeader } from '../ui/BlockBase';
 import { PrestacaoContas, RelatorioGov, PrestacaoContasBenef } from '../../schemas/type-definitions';
 
 // --- 22. Relatório Governamental ---

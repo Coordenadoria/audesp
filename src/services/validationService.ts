@@ -274,18 +274,6 @@ function checkSectionEmpty(id: string, data: PrestacaoContas): boolean {
 export function validateConsistency(data: PrestacaoContas): string[] {
     const consistencyErrors: string[] = [];
 
-    // 1. Totais
-    const totalPagamentos = data.pagamentos?.reduce((acc, cur) => acc + (cur.pagamento_valor || 0), 0) || 0;
-    const totalDevolucoes = data.devolucoes?.reduce((acc, cur) => acc + (cur.valor || 0), 0) || 0;
-
-    const totalRepasses = data.receitas?.repasses_recebidos?.reduce((acc, cur) => acc + (cur.valor || 0), 0) || 0;
-    const totalOutrasReceitas = (data.receitas?.outras_receitas?.reduce((acc, cur) => acc + (cur.valor || 0), 0) || 0) +
-                                (data.receitas?.receitas_aplic_financ_repasses_publicos_municipais || 0) +
-                                (data.receitas?.receitas_aplic_financ_repasses_publicos_estaduais || 0) +
-                                (data.receitas?.receitas_aplic_financ_repasses_publicos_federais || 0);
-
-    const totalSaldoBancario = data.disponibilidades?.saldos.reduce((acc, cur) => acc + (cur.saldo_bancario || 0), 0) || 0;
-
     // AVISO: Sem saldo anterior, não podemos bloquear estritamente Despesas > Receitas, 
     // mas se Despesas > Receitas + Disponibilidades, há um furo óbvio.
     
