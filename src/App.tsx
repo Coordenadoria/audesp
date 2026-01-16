@@ -11,12 +11,11 @@ const EnhancedLoginComponent = lazy(() => import('./components/EnhancedLoginComp
 const BatchPDFImporter = lazy(() => import('./components/BatchPDFImporter').then(m => ({ default: m })));
 const ValidationDashboard = lazy(() => import('./components/ValidationDashboard').then(m => ({ default: m })));
 
-const { login, logout, isAuthenticated, getToken } = (() => {
+const { logout, isAuthenticated, getToken } = (() => {
   try {
     return require('./services/authService');
   } catch {
     return {
-      login: async () => ({ token: '', expire_in: 0, token_type: 'bearer' }),
       logout: () => {},
       isAuthenticated: () => false,
       getToken: () => null
