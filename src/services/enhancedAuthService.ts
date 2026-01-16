@@ -19,15 +19,18 @@ export interface LoginCredentials {
 
 export interface AuthToken {
   token: string;
-  expire_in: number;
+  expires_in: number;
   token_type: string;
   environment: Environment;
   timestamp: number;
 }
 
+// Backend URLs
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+
 const ENVIRONMENTS: Record<Environment, string> = {
-  piloto: 'https://audesp-piloto.tce.sp.gov.br',
-  producao: 'https://audesp.tce.sp.gov.br'
+  piloto: BACKEND_URL,
+  producao: BACKEND_URL
 };
 
 const STORAGE_KEY = 'audesp_auth_token';
@@ -59,29 +62,34 @@ export class EnhancedAuthService {
     try {
       console.log(`[Auth] Fazendo login em ${this.getEnvironment()} (${loginUrl})`);
 
+      // Formatar credenciais no formato esperado: email:senha
+      const authHeader = `${credentials.email}:${credentials.password}`;
+
       const response = await fetch(loginUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'x-authorization': authHeader
         },
-        body: JSON.stringify({
-          email: credentials.email,
-          password: credentials.password
-        }),
         credentials: 'include'
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Login falhou: ${response.status} - ${errorText}`);
+        console.error(`[Auth] Erro ${response.status}: ${errorText}`);
+        
+        if (response.status === 401) {
+          throw new Error('Usuário ou senha inválidos');
+        }
+        throw new Error(`Erro de autenticação: ${response.status}`);
       }
 
       const data = await response.json();
       
       const authToken: AuthToken = {
         token: data.token,
-        expire_in: data.expire_in || 3600,
+        expires_in: data.expire_in || 3600,
         token_type: data.token_type || 'bearer',
         environment: this.getEnvironment(),
         timestamp: Date.now()
@@ -109,7 +117,7 @@ export class EnhancedAuthService {
   static getToken(): AuthToken | null {
     if (this.currentToken) {
       // Verificar se token expirou
-      const expirationTime = this.currentToken.timestamp + (this.currentToken.expire_in * 1000);
+      const expirationTime = this.currentToken.timestamp + (this.currentToken.expires_in * 1000);
       if (Date.now() > expirationTime) {
         this.logout();
         return null;
@@ -123,7 +131,7 @@ export class EnhancedAuthService {
         this.currentToken = JSON.parse(stored);
         
         // Verificar expiração
-        const expirationTime = this.currentToken!.timestamp + (this.currentToken!.expire_in * 1000);
+        const expirationTime = this.currentToken!.timestamp + (this.currentToken!.expires_in * 1000);
         if (Date.now() > expirationTime) {
           this.logout();
           return null;

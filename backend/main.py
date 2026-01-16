@@ -275,6 +275,8 @@ class PDFProcessor:
 
 # ==================== API MODELS ====================
 
+# ==================== API MODELS ====================
+
 class OCRResponse(BaseModel):
     success: bool
     total_pages: Optional[int] = None
@@ -285,8 +287,6 @@ class OCRResponse(BaseModel):
 
 
 # ==================== API ENDPOINTS ====================
-
-@app.get("/health", tags=["Health"])
 async def health_check():
     """Health check endpoint"""
     return {
