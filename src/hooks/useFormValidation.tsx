@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { PrestacaoContas } from '../types';
 import { validateSection, validatePrestacaoContas } from '../services/validationService';
 

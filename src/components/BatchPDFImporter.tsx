@@ -25,7 +25,7 @@ export const BatchPDFImporter: React.FC<BatchPDFImporterProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFiles = Array.from(e.target.files || []).filter((file) =>
+    const selectedFiles = Array.from(e.target.files || []).filter((file: File) =>
       file.type === 'application/pdf'
     );
 
@@ -90,9 +90,9 @@ export const BatchPDFImporter: React.FC<BatchPDFImporterProps> = ({
             onDrop={(e) => {
               e.preventDefault();
               const droppedFiles = Array.from(e.dataTransfer.files).filter(
-                (f) => f.type === 'application/pdf'
+                (f: File) => f.type === 'application/pdf'
               );
-              setFiles(droppedFiles);
+              setFiles(droppedFiles as File[]);
             }}
             className="border-2 border-dashed border-blue-300 rounded-lg p-8 text-center bg-blue-50 mb-4 hover:bg-blue-100 transition cursor-pointer"
           >
