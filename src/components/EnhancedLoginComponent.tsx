@@ -11,7 +11,7 @@ interface LoginProps {
   onError: (error: string) => void;
 }
 
-export const EnhancedLoginComponent: React.FC<LoginProps> = ({
+const EnhancedLoginComponent: React.FC<LoginProps> = ({
   onLoginSuccess,
   onError
 }) => {
