@@ -1,6 +1,7 @@
 
 import { PrestacaoContas, AudespResponse, TipoDocumentoDescritor } from '../types';
 import { saveProtocol } from './protocolService';
+import { AuditLogger } from './auditService';
 
 /**
  * TRANSMISSION SERVICE
@@ -13,6 +14,9 @@ const isLocalhost = typeof window !== 'undefined' && window.location.hostname ==
 const API_BASE = isLocalhost
   ? "/proxy-f5"
   : "https://audesp-piloto.tce.sp.gov.br/f5";
+
+// Initialize Audit Logger
+const auditLogger = new AuditLogger();
 
 // Debug: Log environment detection
 if (typeof window !== 'undefined') {
@@ -129,12 +133,30 @@ export async function sendPrestacaoContas(token: string, data: PrestacaoContas):
             status: result.status,
             tipoDocumento: result.tipoDocumento
         });
+        
+        // Log transmission success in audit
+        auditLogger.logTransmission({
+            protocolo: result.protocolo,
+            status: 'success',
+            tipoDocumento: tipoDoc,
+            timestamp: new Date().toISOString(),
+            endpoint: fullUrl
+        });
     }
 
     return result as AudespResponse;
 
   } catch (error: any) {
     console.error("[Transmission Error]", error);
+    
+    // Log transmission failure in audit
+    auditLogger.logTransmission({
+      status: 'error',
+      tipoDocumento: tipoDoc,
+      timestamp: new Date().toISOString(),
+      endpoint: fullUrl,
+      errorMessage: error.message
+    });
     
     // Detailed error diagnostics for "Failed to fetch"
     let diagnosticMessage = "";

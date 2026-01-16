@@ -138,6 +138,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
             Dashboard Geral
          </button>
 
+         {/* Reports Dashboard Link */}
+         <button
+            onClick={() => setActiveSection('reports')}
+            className={`w-full text-left px-4 py-3 text-xs font-bold uppercase transition-all flex items-center gap-2 ${activeSection === 'reports' ? 'bg-purple-900/40 text-purple-300 border-l-4 border-purple-500' : 'text-slate-400 hover:text-white'}`}
+         >
+            <div className="w-4">📋</div>
+            Validação & Relatórios
+         </button>
+
          {/* Sections */}
          <div className="space-y-1 mt-2">
             {sections.map(group => (

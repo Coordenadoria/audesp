@@ -7,6 +7,7 @@ const FormSections = lazy(() => import('./components/FormSections').then(m => ({
 const Dashboard = lazy(() => import('./components/Dashboard').then(m => ({ default: m.Dashboard })));
 const FullReportImporter = lazy(() => import('./components/FullReportImporter').then(m => ({ default: m.FullReportImporter })));
 const TransmissionResult = lazy(() => import('./components/TransmissionResult').then(m => ({ default: m.TransmissionResult })));
+const ReportsDashboard = lazy(() => import('./components/ReportsDashboard').then(m => ({ default: m })));
 
 const { login, logout, isAuthenticated, getToken } = (() => {
   try {
@@ -399,6 +400,14 @@ const App: React.FC = () => {
                             data={formData} 
                             sectionStatus={sectionStatus} 
                             onNavigate={setActiveSection} 
+                          />
+                      </Suspense>
+                  ) : activeSection === 'reports' ? (
+                      <Suspense fallback={<div className="text-center py-8">Carregando Dashboard de Relatórios...</div>}>
+                          <ReportsDashboard 
+                            formData={formData} 
+                            setFormData={setFormData} 
+                            userId={loginEmail}
                           />
                       </Suspense>
                   ) : (
