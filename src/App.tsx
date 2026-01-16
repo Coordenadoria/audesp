@@ -72,7 +72,7 @@ const App: React.FC = () => {
                   setIsLoggedIn(true);
                   setAuthToken('demo-token-dev');
                   setAuthEnvironment('piloto');
-                  setAuthEmail('usuario.demo@example.com');
+                  setAuthCpf('00000000000');
                   localStorage.setItem('audesp_demo_mode', 'true');
                   
                   const draft = localStorage.getItem('audesp_draft');
@@ -89,7 +89,7 @@ const App: React.FC = () => {
           setIsLoggedIn(true);
           setAuthToken('demo-token-recovery');
           setAuthEnvironment('piloto');
-          setAuthEmail('usuario.demo@example.com');
+          setAuthCpf('00000000000');
       }
   }, []);
 
