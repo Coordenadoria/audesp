@@ -66,10 +66,6 @@ export const BatchPDFImporter: React.FC<BatchPDFImporterProps> = ({
     alert(`Campo '${field}' preenchido com: ${value}`);
   };
 
-  const progress = results
-    ? Math.round((results.processedFiles / results.totalFiles) * 100)
-    : 0;
-
   return (
     <div className="w-full bg-white rounded-lg shadow-lg border border-slate-200 p-6">
       {/* CABEÇALHO */}

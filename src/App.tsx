@@ -4,7 +4,6 @@ import { INITIAL_DATA, PrestacaoContas, AudespResponse } from './types';
 
 const Sidebar = lazy(() => import('./components/Sidebar').then(m => ({ default: m.Sidebar })));
 const FormSections = lazy(() => import('./components/FormSections').then(m => ({ default: m.FormSections })));
-const Dashboard = lazy(() => import('./components/Dashboard').then(m => ({ default: m.Dashboard })));
 const FullReportImporter = lazy(() => import('./components/FullReportImporter').then(m => ({ default: m.FullReportImporter })));
 const TransmissionResult = lazy(() => import('./components/TransmissionResult').then(m => ({ default: m.TransmissionResult })));
 const ReportsDashboard = lazy(() => import('./components/ReportsDashboard').then(m => ({ default: m })));
@@ -56,8 +55,6 @@ const { downloadJson, loadJson } = (() => {
   }
 })();
 
-const LOGO_URL = "https://upload.wikimedia.org/wikipedia/commons/1/1a/Bras%C3%A3o_do_estado_de_S%C3%A3o_Paulo.svg";
-
 interface Notification {
     message: string;
     type: 'success' | 'error' | 'info';
@@ -83,14 +80,7 @@ const App: React.FC = () => {
   const [authEnvironment, setAuthEnvironment] = useState<'piloto' | 'producao'>('piloto');
   const [authEmail, setAuthEmail] = useState<string>('');
   
-  // Legacy login state
-  const [loginEmail, setLoginEmail] = useState('afpereira@saude.sp.gov.br');
-  const [loginPassword, setLoginPassword] = useState('M@dmax2026');
-  const [loginError, setLoginError] = useState<string | null>(null);
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  // PDF Processing
-  const [showPDFImporter, setShowPDFImporter] = useState(false);
 
   // Validation Dashboard
   const [activeTab, setActiveTab] = useState<'form' | 'pdf' | 'validation'>('form');
@@ -123,31 +113,6 @@ const App: React.FC = () => {
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
       setNotification({ message, type });
       setTimeout(() => setNotification(null), 5000);
-  };
-
-  const handleLoginSubmit = async (e: React.FormEvent) => {
-      e.preventDefault();
-      setIsLoggingIn(true);
-      setLoginError(null);
-      try {
-          console.log('[App] Iniciando login...');
-          const res = await login(loginEmail, loginPassword);
-          console.log('[App] Login bem-sucedido, token:', res.token.substring(0, 20) + '...');
-          setAuthToken(res.token);
-          setIsLoggedIn(true);
-          setActiveSection('dashboard');
-          showToast("Login no Ambiente Piloto realizado!", "success");
-          
-          const draft = localStorage.getItem('audesp_draft');
-          if (draft) {
-             try { setFormData(JSON.parse(draft)); } catch {}
-          }
-      } catch (err: any) {
-          console.error('[App] Erro no login:', err);
-          setLoginError(err.message || 'Erro desconhecido ao fazer login');
-      } finally {
-          setIsLoggingIn(false);
-      }
   };
 
   const handleLogout = () => {
