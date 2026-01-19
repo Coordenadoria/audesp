@@ -124,6 +124,10 @@ const App: React.FC = () => {
 
   // Enhanced Login Handler from EnhancedLoginComponent
   const handleEnhancedLoginSuccess = (token: string, environment: 'piloto' | 'producao', cpf: string) => {
+      // Save token to sessionStorage for isAuthenticated() to work
+      sessionStorage.setItem('audesp_token', token);
+      sessionStorage.setItem('audesp_expire', String(Date.now() + 8 * 60 * 60 * 1000)); // 8 hours
+      
       setAuthToken(token);
       setAuthEnvironment(environment);
       setAuthCpf(cpf);
@@ -154,13 +158,22 @@ const App: React.FC = () => {
           try {
               console.log('[Transmit] Starting transmission process');
               
+              // Get token from sessionStorage (set by enhanced login)
+              const token = sessionStorage.getItem('audesp_token') || authTokenRef.current;
+              
               // Check authentication
-              if (!isAuthenticated() || !authTokenRef.current) {
+              if (!token) {
                   const authError = "❌ Sessão expirada. Faça login novamente.";
                   setTransmissionLog([authError]);
                   setTransmissionStatus('error');
                   setTransmissionErrors([{ field: 'Autenticação', message: 'Token não disponível' }]);
                   console.error('[Transmit]', authError);
+                  console.error('[Transmit] Debug:', {
+                      'sessionStorage token': sessionStorage.getItem('audesp_token') ? 'sim' : 'não',
+                      'authTokenRef.current': authTokenRef.current ? 'sim' : 'não',
+                      'isLoggedIn': isLoggedIn,
+                      'authToken': authToken ? 'sim' : 'não'
+                  });
                   return;
               }
 
@@ -212,7 +225,7 @@ const App: React.FC = () => {
               // Call the transmission service
               let res: AudespResponse;
               try {
-                  res = await sendPrestacaoContas(authTokenRef.current, formData, authCpf);
+                  res = await sendPrestacaoContas(token, formData, authCpf);
                   console.log('[Transmit] Response received:', res);
               } catch (sendError: any) {
                   // Network or service error
