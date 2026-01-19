@@ -76,7 +76,10 @@ export async function sendPrestacaoContas(token: string, data: PrestacaoContas, 
       tokenLength: token.length,
       tokenPrefix: token.substring(0, 30),
       startsWithBearer: token.startsWith('Bearer '),
-      cpf: cpf
+      cpf: cpf,
+      cpfType: typeof cpf,
+      cpfLength: cpf ? cpf.length : 0,
+      isCpfValidFormat: cpf ? /^\d{11}$/.test(cpf.replace(/\D/g, '')) : false
   });
 
   const payload = data; 

@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react';
 import EnhancedAuthService, { Environment } from '../services/enhancedAuthService';
+import { extractCpfFromToken } from '../services/authService';
 
 interface LoginProps {
   onLoginSuccess: (token: string, environment: Environment, cpf: string) => void;
@@ -50,13 +51,22 @@ const EnhancedLoginComponent: React.FC<LoginProps> = ({
         password
       });
 
+      // IMPORTANTE: Extrair CPF do token JWT, não usar o email
+      const cpf = extractCpfFromToken(token.token) || email;
+      
+      console.log('[Login] CPF extraído:', {
+        cpfFromToken: extractCpfFromToken(token.token),
+        email: email,
+        finalCpf: cpf
+      });
+
       // Salvar preferência de ambiente
       if (rememberMe) {
         localStorage.setItem('audesp_last_environment', environment);
         localStorage.setItem('audesp_last_email', email);
       }
 
-      onLoginSuccess(token.token, environment, email);
+      onLoginSuccess(token.token, environment, cpf);
     } catch (error: any) {
       onError(error.message || 'Erro ao fazer login');
     } finally {
