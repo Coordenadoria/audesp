@@ -4,15 +4,12 @@ import { INITIAL_DATA, PrestacaoContas, AudespResponse } from './types';
 import { logout, isAuthenticated, getToken } from './services/authService';
 import { sendPrestacaoContas } from './services/transmissionService';
 import { validatePrestacaoContas, getAllSectionsStatus, validateConsistency } from './services/validationService';
-import { downloadJson, loadJson } from './services/fileService';
-import { Sidebar } from './components/Sidebar';
-import { FormSections } from './components/FormSections';
+import { downloadJson } from './services/fileService';
 import { FullReportImporter } from './components/FullReportImporter';
 import { TransmissionResult } from './components/TransmissionResult';
 import { CredentialsModal } from './components/CredentialsModal';
 import { ErrorHelpPanel } from './components/ErrorHelpPanel';
 import EnhancedLoginComponent from './components/EnhancedLoginComponent';
-import BatchPDFImporter from './components/BatchPDFImporter';
 import ErrorDiagnosticsService, { ErrorDiagnostic } from './services/errorDiagnosticsService';
 import ModernMainLayout from './components/ModernMainLayout';
 
@@ -24,7 +21,6 @@ interface Notification {
 const App: React.FC = () => {
   const [activeSection, setActiveSection] = useState('dashboard');
   const [formData, setFormData] = useState<PrestacaoContas>(INITIAL_DATA);
-  const [transmissionLog, setTransmissionLog] = useState<string[]>([]);
   const [showTransmissionModal, setShowTransmissionModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [notification, setNotification] = useState<Notification | null>(null);
@@ -32,7 +28,6 @@ const App: React.FC = () => {
   // New State for Detailed Result
   const [audespResult, setAudespResult] = useState<AudespResponse | null>(null);
   const [transmissionStatus, setTransmissionStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
-  const [transmissionErrors, setTransmissionErrors] = useState<{ field: string; message: string }[]>([]);
 
   // Credentials Modal State
   const [showCredentialsModal, setShowCredentialsModal] = useState(false);
@@ -48,7 +43,6 @@ const App: React.FC = () => {
   // Auth State - Enhanced with Environment
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [authToken, setAuthToken] = useState<string | null>(null);
-  const [authEnvironment, setAuthEnvironment] = useState<'piloto' | 'producao'>('piloto');
   const [authCpf, setAuthCpf] = useState<string>('');
 
   const authTokenRef = useRef<string | null>(authToken);
@@ -149,24 +143,6 @@ const App: React.FC = () => {
 
   const handleEnhancedLoginError = (error: string) => {
       showToast(error, "error");
-  };
-
-  const handleRetryWithNewLogin = () => {
-      // Clear old tokens
-      sessionStorage.removeItem('audesp_token');
-      sessionStorage.removeItem('audesp_expire');
-      localStorage.removeItem('audesp_token');
-      
-      // Close transmission modal
-      setShowTransmissionModal(false);
-      setTransmissionLog([]);
-      setTransmissionErrors([]);
-      setAudespResult(null);
-      
-      // Logout and go to login
-      handleLogout();
-      setActiveSection('dashboard');
-      showToast("🔄 Faça login novamente para obter um novo token", "info");
   };
 
   const handleTransmit = () => {
@@ -420,6 +396,7 @@ const App: React.FC = () => {
       }
   };
 
+  /* Commented: handleLoadJson not used
   const handleLoadJson = async (file: File) => {
       try {
           const data = await loadJson(file);
@@ -429,6 +406,7 @@ const App: React.FC = () => {
           showToast(`Erro ao ler arquivo: ${err.message}`, "error");
       }
   };
+  */
 
   const handleFullImportMerge = (importedData: Partial<PrestacaoContas>) => {
       setFormData(prev => {
@@ -449,6 +427,7 @@ const App: React.FC = () => {
       showToast("Dados importados e mesclados com sucesso!", "success");
   };
 
+  /* Commented: handleNewForm not used
   const handleNewForm = () => {
       if(window.confirm("Tem certeza? Isso apagará todos os dados atuais.")) {
           setFormData(INITIAL_DATA);
@@ -456,6 +435,7 @@ const App: React.FC = () => {
           showToast("Formulário reiniciado.", "info");
       }
   };
+  */
 
   const updateField = (path: string, value: any) => {
       if (typeof path !== 'string') {
