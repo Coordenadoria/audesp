@@ -552,15 +552,6 @@ const App: React.FC = () => {
               isLoading={transmissionStatus === 'processing'}
               sectionStatus={sectionStatus}
           />
-                  </div>
-                  <button
-                      onClick={handleLogout}
-                      className="px-6 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors"
-                  >
-                      Sair
-                  </button>
-              </header>
-          </div>
 
           {/* MODALS & NOTIFICATIONS */}
           {notification && (
