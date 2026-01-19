@@ -9,6 +9,7 @@ import { Sidebar } from './components/Sidebar';
 import { FormSections } from './components/FormSections';
 import { FullReportImporter } from './components/FullReportImporter';
 import { TransmissionResult } from './components/TransmissionResult';
+import { CredentialsModal } from './components/CredentialsModal';
 import ReportsDashboard from './components/ReportsDashboard';
 import EnhancedLoginComponent from './components/EnhancedLoginComponent';
 import BatchPDFImporter from './components/BatchPDFImporter';
@@ -31,6 +32,9 @@ const App: React.FC = () => {
   const [audespResult, setAudespResult] = useState<AudespResponse | null>(null);
   const [transmissionStatus, setTransmissionStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
   const [transmissionErrors, setTransmissionErrors] = useState<{ field: string; message: string }[]>([]);
+
+  // Credentials Modal State
+  const [showCredentialsModal, setShowCredentialsModal] = useState(false);
 
   // Validation State (Computed)
   const sectionStatus = useMemo(() => getAllSectionsStatus(formData), [formData]);
@@ -147,9 +151,24 @@ const App: React.FC = () => {
   };
 
   const handleTransmit = () => {
+      // Show credentials modal first before transmission
+      setShowCredentialsModal(true);
+  };
+
+  const handleCredentialsConfirmed = (cpf: string, email: string) => {
+      setShowCredentialsModal(false);
+      
+      // Update credentials
+      setAuthCpf(cpf);
+      
+      // Now proceed with transmission
       setShowTransmissionModal(true);
       setTransmissionStatus('processing');
-      setTransmissionLog(["⏳ Iniciando processo de transmissão...", "Aguarde..."]);
+      setTransmissionLog([
+          "⏳ Iniciando processo de transmissão...",
+          `👤 Usuário: ${cpf}${email ? ` / ${email}` : ''}`,
+          "Aguarde..."
+      ]);
       setTransmissionErrors([]);
       setAudespResult(null);
       
@@ -628,6 +647,18 @@ const App: React.FC = () => {
               <FullReportImporter 
                   onDataMerge={handleFullImportMerge} 
                   onCancel={() => setShowImportModal(false)} 
+              />
+          )}
+
+          {/* Credentials Modal */}
+          {showCredentialsModal && (
+              <CredentialsModal
+                  isOpen={showCredentialsModal}
+                  onConfirm={handleCredentialsConfirmed}
+                  onCancel={() => {
+                      setShowCredentialsModal(false);
+                  }}
+                  currentCpf={authCpf}
               />
           )}
 
