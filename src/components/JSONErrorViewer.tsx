@@ -14,15 +14,6 @@ interface JSONErrorViewerProps {
   onEdit?: (newData: any) => void;
 }
 
-interface JSONNode {
-  path: string;
-  key: string;
-  value: any;
-  level: number;
-  isError: boolean;
-  errorInfo?: ErrorDiagnostic;
-}
-
 export const JSONErrorViewer: React.FC<JSONErrorViewerProps> = ({
   jsonData,
   diagnostics,

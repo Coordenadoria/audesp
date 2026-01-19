@@ -130,6 +130,7 @@ export class ErrorDiagnosticsService {
 
       // Análise de campo não definido
       if (err.includes('is not defined in the schema')) {
+        // eslint-disable-next-line no-useless-escape
         const fieldMatch = err.match(/\$\.([\w.\[\]]+):/);
         const field = fieldMatch?.[1] || 'desconhecido';
 
@@ -146,6 +147,7 @@ export class ErrorDiagnosticsService {
 
       // Análise de excesso de propriedades
       if (err.includes('may only have a maximum of')) {
+        // eslint-disable-next-line no-useless-escape
         const fieldMatch = err.match(/\$\.([\w.\[\]]+):/);
         const field = fieldMatch?.[1] || 'desconhecido';
         const maxMatch = err.match(/maximum of (\d+)/);
@@ -164,6 +166,7 @@ export class ErrorDiagnosticsService {
 
       // Análise de campo obrigatório
       if (err.includes('is required')) {
+        // eslint-disable-next-line no-useless-escape
         const fieldMatch = err.match(/\$\.([\w.\[\]]+):/);
         const field = fieldMatch?.[1] || 'desconhecido';
 
@@ -180,6 +183,7 @@ export class ErrorDiagnosticsService {
 
       // Análise de formato inválido
       if (err.includes('does not conform to the specified format')) {
+        // eslint-disable-next-line no-useless-escape
         const fieldMatch = err.match(/\$\.([\w.\[\]]+):/);
         const field = fieldMatch?.[1] || 'desconhecido';
 
