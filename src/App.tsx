@@ -440,7 +440,7 @@ const App: React.FC = () => {
                               <div className="p-6">
                                   <ValidationDashboard
                                       formData={formData}
-                                      userId={authEmail}
+                                      userId={authCpf}
                                   />
                               </div>
                           )}
@@ -449,7 +449,7 @@ const App: React.FC = () => {
                       <ReportsDashboard 
                         formData={formData} 
                         setFormData={setFormData} 
-                        userId={authEmail}
+                        userId={authCpf}
                       />
                   ) : (
                       <FormSections 
