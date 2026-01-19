@@ -72,7 +72,8 @@ export async function sendPrestacaoContas(token: string, data: PrestacaoContas, 
   const fullUrl = `${API_BASE}${endpoint}`;
   console.log(`[Transmission] ✓ Permissões validadas. Enviando para: ${fullUrl}`);
   console.log('[Transmission] ========== TOKEN E CPF INFO ==========');
-  console.log('[Transmission] CPF:', {
+  console.log(`[Transmission] CPF: ${cpf} (type: ${typeof cpf}, length: ${cpf ? cpf.length : 0})`);
+  console.log('[Transmission] CPF Detalhado:', {
       value: cpf,
       type: typeof cpf,
       length: cpf ? cpf.length : 0,
@@ -157,6 +158,9 @@ export async function sendPrestacaoContas(token: string, data: PrestacaoContas, 
     console.log(`[Transmission] Environment: ${process.env.NODE_ENV}`);
     console.log(`[Transmission] Is Localhost: ${fullUrl.includes('proxy')}`);
     console.log(`[Transmission] Full Request URL: ${fullUrl}`);
+    console.log(`[Transmission] 🔑 CPF SENDO ENVIADO: ${cpf || 'NÃO INFORMADO'}`);
+    console.log(`[Transmission] Header X-User-CPF: ${cpf || 'vazio'}`);
+    console.log(`[Transmission] CPF Válido (11 dígitos): ${cpf && /^\d{11}$/.test(cpf.replace(/\D/g, '')) ? 'SIM ✅' : 'NÃO ❌'}`);
     console.log(`[Transmission] Form data fields:`, {
       hasDocumentoJSON: formData.has('documentoJSON'),
       documentoJSONSize: formData.get('documentoJSON')?.toString().length + ' bytes'
