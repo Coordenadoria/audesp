@@ -5,7 +5,6 @@
 
 import React, { useState } from 'react';
 import EnhancedAuthService, { Environment } from '../services/enhancedAuthService';
-import { extractCpfFromToken } from '../services/authService';
 
 interface LoginProps {
   onLoginSuccess: (token: string, environment: Environment, cpf: string) => void;
@@ -17,7 +16,7 @@ const EnhancedLoginComponent: React.FC<LoginProps> = ({
   onError
 }) => {
   const [environment, setEnvironment] = useState<Environment>('piloto');
-  const [email, setEmail] = useState('');
+  const [cpf, setCpf] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -31,44 +30,43 @@ const EnhancedLoginComponent: React.FC<LoginProps> = ({
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!email || !password) {
-      onError('Email e senha são obrigatórios');
+    if (!cpf || !password) {
+      onError('CPF e senha são obrigatórios');
       return;
     }
 
-    // Validar email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      onError('Email inválido');
+    // Validar CPF (11 dígitos)
+    const cpfDigits = cpf.replace(/\D/g, '');
+    if (cpfDigits.length !== 11) {
+      onError('CPF deve ter 11 dígitos');
       return;
     }
 
     setIsLoading(true);
 
     try {
+      // Usar CPF como identificador de login (conforme manual Audesp)
       const token = await EnhancedAuthService.login({
-        email,
+        email: cpfDigits, // Enviar CPF como email (compatibilidade com API)
         password
       });
 
-      // IMPORTANTE: Extrair CPF do token JWT, não usar o email
-      const cpf = extractCpfFromToken(token.token) || email;
-      
-      console.log('[Login] ========== RESULTADO DA EXTRAÇÃO DE CPF ==========');
-      console.log('[Login] CPF extraído do JWT:', extractCpfFromToken(token.token));
-      console.log('[Login] Email do login:', email);
-      console.log('[Login] CPF final a ser usado:', cpf);
-      console.log('[Login] =======================================================');
+      console.log('[Login] ========== RESULTADO DO LOGIN COM CPF ==========');
+      console.log('[Login] CPF informado:', cpfDigits);
+      console.log('[Login] Senha: ••••••••');
+      console.log('[Login] Token obtido com sucesso');
+      console.log('[Login] ============================================');
 
       // Salvar preferência de ambiente
       if (rememberMe) {
         localStorage.setItem('audesp_last_environment', environment);
-        localStorage.setItem('audesp_last_email', email);
+        localStorage.setItem('audesp_last_cpf', cpfDigits);
       }
 
-      onLoginSuccess(token.token, environment, cpf);
+      // Passar o CPF como identificador principal
+      onLoginSuccess(token.token, environment, cpfDigits);
     } catch (error: any) {
-      onError(error.message || 'Erro ao fazer login');
+      onError(error.message || 'Erro ao fazer login com CPF');
     } finally {
       setIsLoading(false);
     }
@@ -151,26 +149,33 @@ const EnhancedLoginComponent: React.FC<LoginProps> = ({
 
           {/* FORMULÁRIO */}
           <form onSubmit={handleLogin} className="space-y-4">
-            {/* EMAIL */}
+            {/* CPF - CAMPO PRINCIPAL */}
             <div>
               <label className="block text-xs font-bold uppercase text-slate-600 mb-2">
-                📧 Email
+                🔑 CPF (11 dígitos)
               </label>
               <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="seu.email@dominio.com"
-                className="w-full h-11 px-4 border border-slate-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition text-slate-700 placeholder:text-slate-400"
+                type="text"
+                value={cpf}
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/\D/g, '').slice(0, 11);
+                  setCpf(digits);
+                }}
+                placeholder="00000000000"
+                className="w-full h-11 px-4 border border-slate-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition text-slate-700 placeholder:text-slate-400 font-mono text-lg"
                 disabled={isLoading}
                 required
+                autoFocus
               />
+              <p className="text-xs text-slate-500 mt-1">
+                Seu CPF com 11 dígitos (usado como identificador)
+              </p>
             </div>
 
             {/* SENHA */}
             <div>
               <label className="block text-xs font-bold uppercase text-slate-600 mb-2">
-                Senha
+                🔐 Senha
               </label>
               <div className="relative">
                 <input
@@ -206,7 +211,7 @@ const EnhancedLoginComponent: React.FC<LoginProps> = ({
                 htmlFor="rememberMe"
                 className="text-sm text-slate-600 cursor-pointer"
               >
-                Lembrar ambiente e email
+                Lembrar CPF e ambiente
               </label>
             </div>
 
@@ -224,7 +229,7 @@ const EnhancedLoginComponent: React.FC<LoginProps> = ({
               ) : (
                 <>
                   <span>🔐</span>
-                  Acessar Audesp
+                  Entrar com CPF
                 </>
               )}
             </button>
@@ -238,11 +243,11 @@ const EnhancedLoginComponent: React.FC<LoginProps> = ({
             <p className="text-xs text-slate-600">
               <strong>Ambiente:</strong>{' '}
               {environment === 'piloto'
-                ? '🧪 Teste'
+                ? '🧪 Teste (Piloto)'
                 : '🚀 Produção'}
             </p>
             <p className="text-xs text-slate-500 mt-2">
-              <strong>Login via Email</strong>
+              <strong>Login via CPF</strong> - Conforme Manual Audesp
             </p>
           </div>
         </div>
