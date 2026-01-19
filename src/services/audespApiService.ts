@@ -55,8 +55,7 @@ export class AudespApiService {
         headers: {
           'Accept': 'application/json',
           ...EnhancedAuthService.getAuthHeader()
-        },
-        credentials: 'include'
+        }
       });
 
       const data = await response.json();
@@ -155,8 +154,7 @@ export class AudespApiService {
           'Accept': 'application/json',
           ...EnhancedAuthService.getAuthHeader()
         },
-        body: formData,
-        credentials: 'include'
+        body: formData
       });
 
       const responseData = await response.json();

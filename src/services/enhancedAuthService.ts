@@ -81,8 +81,9 @@ export class EnhancedAuthService {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
           'x-authorization': authHeader
-        },
-        credentials: 'include'
+        }
+        // Removido: credentials: 'include' (causa CORS error com wildcard *)
+        // Não necessário pois autenticação é via header, não cookie
       });
 
       console.log(`[Auth] Response status: ${response.status}`);

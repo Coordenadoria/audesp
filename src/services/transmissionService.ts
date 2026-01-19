@@ -77,7 +77,6 @@ export async function sendPrestacaoContas(token: string, data: PrestacaoContas, 
         ...(cpf && { 'X-User-CPF': cpf })
       },
       body: formData,
-      credentials: 'include',
       signal: controller.signal
     };
 
