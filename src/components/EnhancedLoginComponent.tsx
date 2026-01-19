@@ -16,7 +16,9 @@ const EnhancedLoginComponent: React.FC<LoginProps> = ({
   onError
 }) => {
   const [environment, setEnvironment] = useState<Environment>('piloto');
+  const [loginType, setLoginType] = useState<'cpf' | 'email'>('cpf');
   const [cpf, setCpf] = useState('22586034805');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('M@dmax2026');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -30,26 +32,42 @@ const EnhancedLoginComponent: React.FC<LoginProps> = ({
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!cpf || !password) {
-      onError('CPF e senha são obrigatórios');
+    const credential = loginType === 'cpf' ? cpf : email;
+    if (!credential || !password) {
+      onError(`${loginType === 'cpf' ? 'CPF' : 'Email'} e senha são obrigatórios`);
       return;
+    }
+
+    // Validar email se for email
+    if (loginType === 'email') {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        onError('Email inválido');
+        return;
+      }
     }
 
     setIsLoading(true);
 
     try {
       const token = await EnhancedAuthService.login({
-        cpf,
+        cpf: loginType === 'cpf' ? cpf : '',
+        email: loginType === 'email' ? email : '',
         password
       });
 
       // Salvar preferência de ambiente
       if (rememberMe) {
         localStorage.setItem('audesp_last_environment', environment);
-        localStorage.setItem('audesp_last_cpf', cpf);
+        if (loginType === 'cpf') {
+          localStorage.setItem('audesp_last_cpf', cpf);
+        } else {
+          localStorage.setItem('audesp_last_email', email);
+        }
+        localStorage.setItem('audesp_last_login_type', loginType);
       }
 
-      onLoginSuccess(token.token, environment, cpf);
+      onLoginSuccess(token.token, environment, loginType === 'cpf' ? cpf : email);
     } catch (error: any) {
       onError(error.message || 'Erro ao fazer login');
     } finally {
@@ -134,21 +152,64 @@ const EnhancedLoginComponent: React.FC<LoginProps> = ({
 
           {/* FORMULÁRIO */}
           <form onSubmit={handleLogin} className="space-y-4">
-            {/* CPF */}
-            <div>
-              <label className="block text-xs font-bold uppercase text-slate-600 mb-2">
-                CPF
-              </label>
-              <input
-                type="text"
-                value={cpf}
-                onChange={(e) => setCpf(e.target.value.replace(/\D/g, '').slice(0, 11))}
-                placeholder="123.456.789-00"
-                className="w-full h-11 px-4 border border-slate-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition text-slate-700 placeholder:text-slate-400"
-                disabled={isLoading}
-                required
-              />
+            {/* ABAS DE LOGIN - CPF / EMAIL */}
+            <div className="flex border-b border-slate-200 mb-4">
+              <button
+                type="button"
+                onClick={() => setLoginType('cpf')}
+                className={`flex-1 py-2 font-bold text-sm transition-colors ${
+                  loginType === 'cpf'
+                    ? 'text-blue-600 border-b-2 border-blue-600'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                💳 CPF
+              </button>
+              <button
+                type="button"
+                onClick={() => setLoginType('email')}
+                className={`flex-1 py-2 font-bold text-sm transition-colors ${
+                  loginType === 'email'
+                    ? 'text-blue-600 border-b-2 border-blue-600'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                📧 Email
+              </button>
             </div>
+
+            {/* CPF OU EMAIL */}
+            {loginType === 'cpf' ? (
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-600 mb-2">
+                  CPF
+                </label>
+                <input
+                  type="text"
+                  value={cpf}
+                  onChange={(e) => setCpf(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                  placeholder="123.456.789-00"
+                  className="w-full h-11 px-4 border border-slate-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition text-slate-700 placeholder:text-slate-400"
+                  disabled={isLoading}
+                  required
+                />
+              </div>
+            ) : (
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-600 mb-2">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="seu.email@exemplo.com"
+                  className="w-full h-11 px-4 border border-slate-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition text-slate-700 placeholder:text-slate-400"
+                  disabled={isLoading}
+                  required
+                />
+              </div>
+            )}
 
             {/* SENHA */}
             <div>

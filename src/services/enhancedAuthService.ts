@@ -13,7 +13,8 @@ export interface AuthConfig {
 }
 
 export interface LoginCredentials {
-  cpf: string;
+  cpf?: string;
+  email?: string;
   password: string;
 }
 
@@ -70,10 +71,15 @@ export class EnhancedAuthService {
 
     try {
       console.log(`[Auth] Tentando login em ${this.getEnvironment()} (${loginUrl})`);
-      console.log(`[Auth] CPF: ${credentials.cpf}`);
+      
+      // Determinar se é login por CPF ou Email
+      const loginIdentifier = credentials.cpf || credentials.email;
+      const loginType = credentials.cpf ? 'CPF' : 'Email';
+      
+      console.log(`[Auth] ${loginType}: ${loginIdentifier}`);
 
-      // Formatar credenciais no formato esperado: cpf:senha
-      const authHeader = `${credentials.cpf}:${credentials.password}`;
+      // Formatar credenciais no formato esperado: cpf_ou_email:senha
+      const authHeader = `${loginIdentifier}:${credentials.password}`;
 
       const response = await fetch(loginUrl, {
         method: 'POST',
