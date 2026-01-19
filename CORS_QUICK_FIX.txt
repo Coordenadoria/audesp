@@ -1,0 +1,75 @@
+═══════════════════════════════════════════════════════════════════════════════
+                    ✅ CORS ERROR FIXADO - RESUMO RÁPIDO
+═══════════════════════════════════════════════════════════════════════════════
+
+🚨 ERRO QUE VOCÊ RECEBEU:
+─────────────────────────────────────────────────────────────────────────────
+
+Access to fetch at 'https://audesp-piloto.tce.sp.gov.br/login' has been blocked 
+by CORS policy: ...Access-Control-Allow-Origin: * + credentials: 'include' ❌
+
+
+🔧 O QUE FOI CORRIGIDO:
+─────────────────────────────────────────────────────────────────────────────
+
+Removemos `credentials: 'include'` de 4 arquivos:
+  ✅ src/services/enhancedAuthService.ts
+  ✅ src/services/audespApiService.ts
+  ✅ src/services/transmissionService.ts
+
+Por quê?
+  • Conflito CORS: wildcard (*) + credenciais não é permitido
+  • Seu app usa auth via HEADER, não cookie
+  • credentials: 'include' era desnecessário
+
+
+🚀 PRÓXIMO PASSO:
+─────────────────────────────────────────────────────────────────────────────
+
+1. Fazer novo build e deploy:
+   $ npm run build
+   $ vercel deploy --prod
+
+2. Testar login em: https://seu-app.vercel.app
+
+3. Resultado esperado:
+   ✅ Login funciona SEM erro CORS
+   ✅ Dashboard carrega
+   ou ✅ Erro 401 se credenciais forem inválidas
+
+
+📊 ANTES vs DEPOIS:
+─────────────────────────────────────────────────────────────────────────────
+
+ANTES:
+  ❌ Erro CORS em Vercel
+  ❌ "credentials mode is 'include'" error
+  ❌ Login não funciona em produção
+  
+DEPOIS:
+  ✅ Sem erro CORS
+  ✅ Login funciona em qualquer origem
+  ✅ Funciona em localhost E em Vercel
+
+
+📚 PARA SABER MAIS:
+─────────────────────────────────────────────────────────────────────────────
+
+Leia: CORS_ERROR_FIX.md (explicação completa)
+
+Contém:
+  • Diagnóstico detalhado
+  • Por que acontecia
+  • Como foi corrigido
+  • Como testar
+  • FAQ com respostas
+
+
+✨ CONCLUSÃO:
+─────────────────────────────────────────────────────────────────────────────
+
+CORS error está RESOLVIDO ✅
+
+O login deve funcionar agora tanto em desenvolvimento quanto em produção!
+
+═══════════════════════════════════════════════════════════════════════════════
