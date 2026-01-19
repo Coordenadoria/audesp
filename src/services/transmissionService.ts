@@ -51,7 +51,13 @@ export async function sendPrestacaoContas(token: string, data: PrestacaoContas, 
 
   const fullUrl = `${API_BASE}${endpoint}`;
   console.log(`[Transmission] Enviando para: ${fullUrl}`);
-  console.log(`[Transmission] Token prefix: ${token.substring(0, 20)}...`);
+  console.log(`[Transmission] Token info:`, {
+      hasToken: !!token,
+      tokenLength: token.length,
+      tokenPrefix: token.substring(0, 30),
+      startsWithBearer: token.startsWith('Bearer '),
+      cpf: cpf
+  });
 
   const payload = data; 
 
@@ -77,14 +83,24 @@ export async function sendPrestacaoContas(token: string, data: PrestacaoContas, 
       signal: controller.signal
     };
 
+    const authHeader = requestConfig.headers as Record<string, string>;
+    console.log(`[Transmission] 🔐 Authorization Header:`, {
+      raw: authHeader['Authorization'],
+      prefix: authHeader['Authorization']?.substring(0, 10),
+      hasBearer: authHeader['Authorization']?.startsWith('Bearer '),
+      tokenLength: authHeader['Authorization']?.replace('Bearer ', '').length,
+      tokenHash: authHeader['Authorization']?.substring(0, 40) + '...'
+    });
     console.log(`[Transmission] Request headers:`, {
-      'Authorization': `Bearer ${token.substring(0, 20)}...`,
+      'Authorization': authHeader['Authorization']?.substring(0, 40) + '...',
       'Accept': 'application/json',
+      'X-User-CPF': cpf || 'não informado',
       'Content-Type': 'multipart/form-data (auto)'
     });
     console.log(`[Transmission] Endpoint: ${fullUrl}`);
     console.log(`[Transmission] Method: POST`);
     console.log(`[Transmission] Environment: ${process.env.NODE_ENV}`);
+    console.log(`[Transmission] Is Localhost: ${fullUrl.includes('proxy')}`);
 
     let response: Response;
     try {
@@ -94,11 +110,12 @@ export async function sendPrestacaoContas(token: string, data: PrestacaoContas, 
     }
 
     const responseText = await response.text();
-    console.log(`[Transmission] Status: ${response.status}`);
-    console.log(`[Transmission] Response headers:`, {
+    console.log(`[Transmission] ✅ Response Status: ${response.status}`);
+    console.log(`[Transmission] Response Headers:`, {
       'content-type': response.headers.get('content-type'),
       'access-control-allow-origin': response.headers.get('access-control-allow-origin')
     });
+    console.log(`[Transmission] Response Body (first 500 chars):`, responseText.substring(0, 500));
     
     let result: any;
     try {
@@ -111,13 +128,45 @@ export async function sendPrestacaoContas(token: string, data: PrestacaoContas, 
         // Formata erro JSON para exibição amigável
         const errorDetails = JSON.stringify(result, null, 2);
         
-        // Adicionar contexto de debugging para erro 403
-        if (response.status === 403) {
-            console.error(`[Transmission] 403 Forbidden - Verificar:
-1. Token de autenticação válido: ${token ? 'SIM' : 'NÃO'}
-2. Permissões do usuário no Audesp Piloto
-3. Endpoint correto: ${fullUrl}
-4. CORS configurado no servidor`);
+        // Adicionar contexto de debugging para erro 401
+        if (response.status === 401) {
+            const diagnosticInfo = `[Transmission] 401 Unauthorized - Diagnosticando:
+1. Token válido: ${token ? 'SIM (length: ' + token.length + ')' : 'NÃO'}
+2. Token formato: ${token.startsWith('Bearer ') ? 'Com Bearer prefix' : 'Sem prefix (será adicionado)'}
+3. Token primeiros 30 chars: ${token.substring(0, 30)}...
+4. CPF informado: ${cpf || 'NÃO'}
+5. Endpoint: ${fullUrl}
+6. Response: ${errorDetails}
+
+🔍 DIAGNÓSTICO DO ERRO 401:
+Este erro significa que a credencial foi rejeitada pela API Audesp.
+Possíveis causas:
+1. O CPF ${cpf || '(não informado)'} não tem permissão para transmitir (verifique com Audesp)
+2. O token foi revogado ou expirou (refaça login)
+3. A API Audesp está rejeitando requisições de sua IP/localidade
+4. O endpoint pode estar desativado no ambiente piloto
+
+PRÓXIMOS PASSOS:
+1. Verifique se o seu CPF tem permissão para "Prestação de Contas de Convênio"
+2. Faça logout e login novamente para renovar o token
+3. Contate o suporte Audesp: suporte@audesp.tce.sp.gov.br
+4. Mencione o código de erro: TRANS-401-${Date.now().toString().slice(-6)}`;
+            
+            console.error(diagnosticInfo);
+            
+            // Lançar erro com mensagem amigável para o usuário
+            const userMessage = `❌ Erro de Autenticação (401):
+${result.message || 'Credencial não reconhecida pela API Audesp'}
+
+⚠️ Verifique:
+• Suas credenciais estão corretas?
+• Seu CPF tem permissão para transmitir?
+• Você está no ambiente correto (Piloto/Produção)?
+
+💡 Se o problema persistir:
+Contate o suporte Audesp com o código: TRANS-401-${Date.now().toString().slice(-6)}`;
+            
+            throw new Error(userMessage);
         }
         
         throw new Error(errorDetails);

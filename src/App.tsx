@@ -158,13 +158,20 @@ const App: React.FC = () => {
           try {
               console.log('[Transmit] Starting transmission process');
               
-              // Get token - check sessionStorage first, then state
-              let token = sessionStorage.getItem('audesp_token') || authTokenRef.current;
+              // Debug: Check all token sources
+              const tokenFromSessionStorage = sessionStorage.getItem('audesp_token');
+              const expireFromSessionStorage = sessionStorage.getItem('audesp_expire');
               
-              // If no token in sessionStorage, try to get from enhanced auth service
-              if (!token && authToken) {
-                  token = authToken;
-              }
+              console.log('[Transmit] Token sources:', {
+                  sessionStorageToken: tokenFromSessionStorage?.substring(0, 20) + '...',
+                  sessionStorageExpire: expireFromSessionStorage,
+                  authTokenRef: authTokenRef.current?.substring(0, 20) + '...',
+                  authTokenState: authToken?.substring(0, 20) + '...',
+                  authCpf: authCpf
+              });
+
+              // Get token - check sessionStorage first (highest priority), then state
+              let token = sessionStorage.getItem('audesp_token') || authToken || authTokenRef.current;
               
               // Check authentication
               if (!token) {
@@ -172,14 +179,42 @@ const App: React.FC = () => {
                   setTransmissionLog([authError]);
                   setTransmissionStatus('error');
                   setTransmissionErrors([{ field: 'Autenticação', message: 'Token não disponível' }]);
-                  console.error('[Transmit]', authError);
+                  console.error('[Transmit]', authError, { 
+                      sessionStorage: !!tokenFromSessionStorage,
+                      authToken: !!authToken,
+                      authRef: !!authTokenRef.current
+                  });
+                  return;
+              }
+
+              // Check token expiration
+              const expireTime = sessionStorage.getItem('audesp_expire');
+              if (expireTime && Date.now() > parseInt(expireTime)) {
+                  const expireError = "❌ Token expirado. Faça login novamente.";
+                  setTransmissionLog([expireError]);
+                  setTransmissionStatus('error');
+                  setTransmissionErrors([{ field: 'Autenticação', message: 'Token expirado' }]);
+                  console.error('[Transmit]', expireError, { 
+                      now: Date.now(),
+                      expireTime: parseInt(expireTime),
+                      diff: parseInt(expireTime) - Date.now()
+                  });
                   return;
               }
 
               // Ensure token doesn't have "Bearer " prefix (sendPrestacaoContas will add it)
               if (token.startsWith('Bearer ')) {
                   token = token.substring(7);
+                  console.log('[Transmit] Removed Bearer prefix from token');
               }
+              
+              console.log('[Transmit] Token validated and ready:', {
+                  hasToken: !!token,
+                  tokenLength: token?.length,
+                  tokenPrefix: token?.substring(0, 20),
+                  cpf: authCpf,
+                  expiresIn: expireTime ? Math.ceil((parseInt(expireTime) - Date.now()) / 1000) + 's' : 'unknown'
+              });
 
               // Step 1: Local Validation
               setTransmissionLog(prev => [...prev, "📋 Validando estrutura de dados (schema)..."]);

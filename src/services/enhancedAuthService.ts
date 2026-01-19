@@ -103,10 +103,24 @@ export class EnhancedAuthService {
       const data = JSON.parse(responseText);
       
       // TCESP response uses "access_token" not "token"
-      // expire_in is a timestamp (milliseconds), not seconds
+      // expire_in can be: milliseconds timestamp, seconds from now, or expires_in value
       const tokenValue = data.access_token || data.token;
-      const expiresInMs = data.expire_in || data.expires_in || 0;
-      const expiresInSeconds = expiresInMs > 0 ? Math.floor((expiresInMs - Date.now()) / 1000) : 3600;
+      
+      // Handle different expiration formats
+      let expiresInSeconds = 3600; // Default: 1 hour
+      if (data.expire_in) {
+        if (data.expire_in > Date.now()) {
+          // It's a future timestamp in milliseconds
+          expiresInSeconds = Math.floor((data.expire_in - Date.now()) / 1000);
+        } else if (data.expire_in > 100) {
+          // It's seconds
+          expiresInSeconds = Math.floor(data.expire_in);
+        }
+      } else if (data.expires_in) {
+        expiresInSeconds = Math.floor(data.expires_in);
+      } else if (data.ttl) {
+        expiresInSeconds = Math.floor(data.ttl);
+      }
       
       const authToken: AuthToken = {
         token: tokenValue,
@@ -120,7 +134,11 @@ export class EnhancedAuthService {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(authToken));
       this.currentToken = authToken;
 
-      console.log(`[Auth] ✅ Login bem-sucedido em ${this.getEnvironment()}`);
+      console.log(`[Auth] ✅ Login bem-sucedido em ${this.getEnvironment()}`, {
+        token: tokenValue?.substring(0, 20) + '...',
+        expiresInSeconds,
+        tokenType: authToken.token_type
+      });
       return authToken;
 
     } catch (error: any) {
@@ -138,8 +156,9 @@ export class EnhancedAuthService {
   static getToken(): AuthToken | null {
     if (this.currentToken) {
       // Verificar se token expirou
-      const expirationTime = this.currentToken.timestamp + (this.currentToken.expires_in * 1000);
+      const expirationTime = this.currentToken.timestamp + (this.currentToken.expire_in * 1000);
       if (Date.now() > expirationTime) {
+        console.warn('[Auth] Token expirado, limpando sessão');
         this.logout();
         return null;
       }
@@ -152,8 +171,9 @@ export class EnhancedAuthService {
         this.currentToken = JSON.parse(stored);
         
         // Verificar expiração
-        const expirationTime = this.currentToken!.timestamp + (this.currentToken!.expires_in * 1000);
+        const expirationTime = this.currentToken!.timestamp + (this.currentToken!.expire_in * 1000);
         if (Date.now() > expirationTime) {
+          console.warn('[Auth] Token armazenado expirado, limpando sessão');
           this.logout();
           return null;
         }
