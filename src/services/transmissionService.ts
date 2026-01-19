@@ -6,13 +6,13 @@ import { AuditLogger } from './auditService';
 /**
  * TRANSMISSION SERVICE
  * Endpoint Oficial de Envio (Piloto): https://audesp-piloto.tce.sp.gov.br/f5/enviar-prestacao-contas-convenio
- * Proxied in dev via /proxy-f5 (rewritten to /f5)
+ * Proxied in dev via /proxy-piloto-f5 (rewritten to /f5)
  * IMPORTANTE: /f5 é NECESSÁRIO - faz parte da API oficial
  */
 
 const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
 const API_BASE = isLocalhost
-  ? "/proxy-f5"
+  ? "/proxy-piloto-f5"
   : "https://audesp-piloto.tce.sp.gov.br/f5";
 
 // Initialize Audit Logger

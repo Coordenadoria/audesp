@@ -5,11 +5,11 @@ import { saveProtocol } from './protocolService';
 /**
  * TRANSMISSION SERVICE
  * Endpoint Oficial de Envio (Piloto): https://audesp-piloto.tce.sp.gov.br/f5/enviar-prestacao-contas-convenio
- * Proxied in dev via /proxy-f5
+ * Proxied in dev via /proxy-piloto-f5
  */
 
 const API_BASE = typeof window !== 'undefined' && window.location.hostname === 'localhost'
-  ? "/proxy-f5"
+  ? "/proxy-piloto-f5"
   : "https://audesp-piloto.tce.sp.gov.br/f5";
 
 const ROUTE_MAP: Record<TipoDocumentoDescritor, string> = {

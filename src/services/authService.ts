@@ -4,12 +4,12 @@ import { TokenResponse } from '../types';
 /**
  * AUTH SERVICE
  * Endpoint Oficial: https://audesp-piloto.tce.sp.gov.br/login
- * Proxied in dev via /proxy-login
+ * Proxied in dev via /proxy-piloto-login
  */
 
 const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
 const API_BASE = isLocalhost
-  ? "/proxy-login" 
+  ? "/proxy-piloto-login" 
   : "https://audesp-piloto.tce.sp.gov.br";
 
 // Debug: Log environment detection

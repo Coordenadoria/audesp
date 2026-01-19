@@ -4,11 +4,11 @@ import { TokenResponse } from '../types';
 /**
  * AUTH SERVICE
  * Endpoint Oficial: https://audesp-piloto.tce.sp.gov.br/login
- * Proxied in dev via /proxy-login
+ * Proxied in dev via /proxy-piloto-login
  */
 
 const API_BASE = typeof window !== 'undefined' && window.location.hostname === 'localhost'
-  ? "/proxy-login" 
+  ? "/proxy-piloto-login" 
   : "https://audesp-piloto.tce.sp.gov.br";
 
 const STORAGE_TOKEN_KEY = "audesp_token";
