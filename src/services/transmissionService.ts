@@ -15,9 +15,6 @@ const API_BASE = isLocalhost
   ? "/proxy-piloto-f5"
   : "https://audesp-piloto.tce.sp.gov.br/f5";
 
-// Initialize Audit Logger
-const auditLogger = new AuditLogger();
-
 // Debug: Log environment detection
 if (typeof window !== 'undefined') {
   console.log('[Transmission Init]', {
@@ -72,7 +69,7 @@ export async function sendPrestacaoContas(token: string, data: PrestacaoContas, 
     const requestConfig: RequestInit = {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        'Authorization': token.startsWith('Bearer ') ? token : `Bearer ${token}`,
         'Accept': 'application/json',
         ...(cpf && { 'X-User-CPF': cpf })
       },
@@ -136,13 +133,11 @@ export async function sendPrestacaoContas(token: string, data: PrestacaoContas, 
         });
         
         // Log transmission success in audit
-        auditLogger.logTransmission({
-            protocolo: result.protocolo,
-            status: 'success',
-            tipoDocumento: tipoDoc,
-            timestamp: new Date().toISOString(),
-            endpoint: fullUrl
-        });
+        AuditLogger.logTransmission(
+            tipoDoc,
+            result.protocolo,
+            'SUCCESS'
+        );
     }
 
     return result as AudespResponse;
@@ -151,13 +146,12 @@ export async function sendPrestacaoContas(token: string, data: PrestacaoContas, 
     console.error("[Transmission Error]", error);
     
     // Log transmission failure in audit
-    auditLogger.logTransmission({
-      status: 'error',
-      tipoDocumento: tipoDoc,
-      timestamp: new Date().toISOString(),
-      endpoint: fullUrl,
-      errorMessage: error.message
-    });
+    AuditLogger.logTransmission(
+      tipoDoc,
+      null,
+      'FAILED',
+      error.message
+    );
     
     // Detailed error diagnostics for "Failed to fetch"
     let diagnosticMessage = "";

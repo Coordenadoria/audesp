@@ -158,8 +158,13 @@ const App: React.FC = () => {
           try {
               console.log('[Transmit] Starting transmission process');
               
-              // Get token from sessionStorage (set by enhanced login)
-              const token = sessionStorage.getItem('audesp_token') || authTokenRef.current;
+              // Get token - check sessionStorage first, then state
+              let token = sessionStorage.getItem('audesp_token') || authTokenRef.current;
+              
+              // If no token in sessionStorage, try to get from enhanced auth service
+              if (!token && authToken) {
+                  token = authToken;
+              }
               
               // Check authentication
               if (!token) {
@@ -168,13 +173,12 @@ const App: React.FC = () => {
                   setTransmissionStatus('error');
                   setTransmissionErrors([{ field: 'Autenticação', message: 'Token não disponível' }]);
                   console.error('[Transmit]', authError);
-                  console.error('[Transmit] Debug:', {
-                      'sessionStorage token': sessionStorage.getItem('audesp_token') ? 'sim' : 'não',
-                      'authTokenRef.current': authTokenRef.current ? 'sim' : 'não',
-                      'isLoggedIn': isLoggedIn,
-                      'authToken': authToken ? 'sim' : 'não'
-                  });
                   return;
+              }
+
+              // Ensure token doesn't have "Bearer " prefix (sendPrestacaoContas will add it)
+              if (token.startsWith('Bearer ')) {
+                  token = token.substring(7);
               }
 
               // Step 1: Local Validation
