@@ -54,11 +54,11 @@ const EnhancedLoginComponent: React.FC<LoginProps> = ({
       // IMPORTANTE: Extrair CPF do token JWT, não usar o email
       const cpf = extractCpfFromToken(token.token) || email;
       
-      console.log('[Login] CPF extraído:', {
-        cpfFromToken: extractCpfFromToken(token.token),
-        email: email,
-        finalCpf: cpf
-      });
+      console.log('[Login] ========== RESULTADO DA EXTRAÇÃO DE CPF ==========');
+      console.log('[Login] CPF extraído do JWT:', extractCpfFromToken(token.token));
+      console.log('[Login] Email do login:', email);
+      console.log('[Login] CPF final a ser usado:', cpf);
+      console.log('[Login] =======================================================');
 
       // Salvar preferência de ambiente
       if (rememberMe) {

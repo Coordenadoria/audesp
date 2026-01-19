@@ -71,16 +71,22 @@ export async function sendPrestacaoContas(token: string, data: PrestacaoContas, 
 
   const fullUrl = `${API_BASE}${endpoint}`;
   console.log(`[Transmission] ✓ Permissões validadas. Enviando para: ${fullUrl}`);
-  console.log(`[Transmission] Token info:`, {
+  console.log('[Transmission] ========== TOKEN E CPF INFO ==========');
+  console.log('[Transmission] CPF:', {
+      value: cpf,
+      type: typeof cpf,
+      length: cpf ? cpf.length : 0,
+      isEmail: cpf ? cpf.includes('@') : false,
+      isCpf: cpf ? /^\d{11}$/.test(cpf.replace(/\D/g, '')) : false,
+      isValid: cpf ? /^\d{11}$/.test(cpf.replace(/\D/g, '')) && !cpf.includes('@') : false
+  });
+  console.log('[Transmission] Token:', {
       hasToken: !!token,
       tokenLength: token.length,
       tokenPrefix: token.substring(0, 30),
       startsWithBearer: token.startsWith('Bearer '),
-      cpf: cpf,
-      cpfType: typeof cpf,
-      cpfLength: cpf ? cpf.length : 0,
-      isCpfValidFormat: cpf ? /^\d{11}$/.test(cpf.replace(/\D/g, '')) : false
   });
+  console.log('[Transmission] =============================================');
 
   const payload = data; 
 

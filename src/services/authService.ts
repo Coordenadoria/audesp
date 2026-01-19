@@ -165,38 +165,68 @@ export function extractCpfFromToken(token: string): string | null {
     const padded = payload + '='.repeat((4 - payload.length % 4) % 4);
     const decoded = JSON.parse(atob(padded));
 
-    console.log('[Auth] JWT Payload decodificado:', {
-      keys: Object.keys(decoded),
+    console.log('[Auth] ========== JWT PAYLOAD DECODIFICADO COMPLETO ==========');
+    console.log('[Auth] Todos os campos disponíveis:', JSON.stringify(decoded, null, 2));
+    console.log('[Auth] =========================================================');
+
+    // Valores de cada campo importante
+    console.log('[Auth] Valores analisados:', {
       sub: decoded.sub,
       cpf: decoded.cpf,
       user_id: decoded.user_id,
+      usuario: decoded.usuario,
       email: decoded.email,
-      name: decoded.name
+      name: decoded.name,
+      roles: decoded.roles
     });
 
     // Procurar CPF em campos conhecidos
-    const cpf = 
+    let cpf = 
       decoded.cpf ||           // Campo direto CPF
       decoded.sub ||           // Subject (pode ser CPF)
       decoded.user_id ||       // ID do usuário
       decoded.usuario ||       // Campo usuario
-      (decoded.email && decoded.email.includes('@') 
-        ? null  // Se for email, não usar como CPF
-        : decoded.email);      // Senão, pode ser identificador
+      null;
 
+    // Se achou algo, validar se é CPF (11 dígitos)
     if (cpf && typeof cpf === 'string') {
-      // Validar se parece um CPF (11 dígitos)
       const cpfClean = cpf.replace(/\D/g, '');
       if (cpfClean.length === 11) {
-        console.log('[Auth] CPF extraído do token:', cpfClean);
+        console.log('[Auth] ✅ CPF VÁLIDO EXTRAÍDO:', {
+          original: cpf,
+          cleaned: cpfClean,
+          source: cpf === decoded.cpf ? 'decoded.cpf' : 
+                  cpf === decoded.sub ? 'decoded.sub' :
+                  cpf === decoded.user_id ? 'decoded.user_id' :
+                  cpf === decoded.usuario ? 'decoded.usuario' : 'unknown'
+        });
         return cpfClean;
       }
     }
 
-    console.warn('[Auth] Não foi possível extrair CPF válido do token');
+    // ⚠️ Se chegou aqui, CPF não foi encontrado ou inválido
+    console.warn('[Auth] ⚠️  CPF NÃO ENCONTRADO NO JWT!');
+    console.warn('[Auth] Campos disponíveis no JWT:', Object.keys(decoded));
+    console.warn('[Auth] O servidor precisa retornar CPF em um destes campos:');
+    console.warn('[Auth]   1. cpf (ideal)');
+    console.warn('[Auth]   2. sub (Subject)');
+    console.warn('[Auth]   3. user_id');
+    console.warn('[Auth]   4. usuario');
+    
+    // Se o email parece ser um CPF (11 dígitos), usar como fallback
+    if (decoded.email) {
+      const emailClean = decoded.email.replace(/\D/g, '');
+      if (emailClean.length === 11) {
+        console.log('[Auth] ℹ️  Email parece ser CPF, usando como fallback:', emailClean);
+        return emailClean;
+      }
+    }
+
+    console.error('[Auth] ❌ FALHA CRÍTICA: Impossível extrair CPF válido do token!');
+    console.error('[Auth] Contate Audesp para adicionar CPF ao JWT payload');
     return null;
   } catch (error) {
-    console.error('[Auth] Erro ao decodificar JWT:', error);
+    console.error('[Auth] ❌ Erro ao decodificar JWT:', error);
     return null;
   }
 }
