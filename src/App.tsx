@@ -52,6 +52,19 @@ const App: React.FC = () => {
       authTokenRef.current = authToken;
   }, [authToken]);
 
+  // Close modal on ESC key
+  useEffect(() => {
+      const handleEsc = (e: KeyboardEvent) => {
+          if (e.key === 'Escape' && showTransmissionModal) {
+              setShowTransmissionModal(false);
+              setTransmissionLog([]);
+              setTransmissionErrors([]);
+          }
+      };
+      window.addEventListener('keydown', handleEsc);
+      return () => window.removeEventListener('keydown', handleEsc);
+  }, [showTransmissionModal]);
+
   useEffect(() => {
       try {
           // Check if already authenticated
@@ -132,22 +145,36 @@ const App: React.FC = () => {
   const handleTransmit = () => {
       setShowTransmissionModal(true);
       setTransmissionStatus('processing');
-      setTransmissionLog(["Iniciando processo de transmissão..."]);
+      setTransmissionLog(["⏳ Iniciando processo de transmissão...", "Aguarde..."]);
       setTransmissionErrors([]);
       setAudespResult(null);
       
+      // Use setTimeout to allow modal to render before starting async work
       setTimeout(async () => {
           try {
+              console.log('[Transmit] Starting transmission process');
+              
+              // Check authentication
               if (!isAuthenticated() || !authTokenRef.current) {
-                  throw new Error("Sessão expirada. Faça login novamente.");
+                  const authError = "❌ Sessão expirada. Faça login novamente.";
+                  setTransmissionLog([authError]);
+                  setTransmissionStatus('error');
+                  setTransmissionErrors([{ field: 'Autenticação', message: 'Token não disponível' }]);
+                  console.error('[Transmit]', authError);
+                  return;
               }
 
-              setTransmissionLog(prev => [...prev, "Validando estrutura de dados..."]);
+              // Step 1: Local Validation
+              setTransmissionLog(prev => [...prev, "📋 Validando estrutura de dados (schema)..."]);
               const errors = validatePrestacaoContas(formData);
+              console.log('[Transmit] Validation errors:', errors.length);
               
-              setTransmissionLog(prev => [...prev, "Verificando consistência contábil (cross-check)..."]);
+              // Step 2: Consistency Check
+              setTransmissionLog(prev => [...prev, "🔗 Verificando consistência contábil (cross-check)..."]);
               const consistencyErrors = validateConsistency(formData);
+              console.log('[Transmit] Consistency errors:', consistencyErrors.length);
               
+              // If validation fails, show errors and stop
               if (errors.length > 0 || consistencyErrors.length > 0) {
                   setTransmissionStatus('error');
                   
@@ -168,21 +195,50 @@ const App: React.FC = () => {
                   setTransmissionErrors(parsedErrors);
                   setTransmissionLog([
                       "❌ ERRO DE VALIDAÇÃO LOCAL:",
-                      `${errors.length} erro(s) de validação encontrado(s)`,
-                      `${consistencyErrors.length} erro(s) de consistência encontrado(s)`,
+                      `📊 ${errors.length} erro(s) de validação encontrado(s)`,
+                      `🔗 ${consistencyErrors.length} erro(s) de consistência encontrado(s)`,
                       "",
                       "CAMPOS COM PROBLEMAS:",
-                      ...parsedErrors.map(e => `  • ${e.field}: ${e.message}`)
+                      ...parsedErrors.map(e => `  ⚠️  ${e.field}`)
                   ]);
+                  console.log('[Transmit] Validation failed, stopping transmission');
                   return;
               }
 
-              setTransmissionLog(prev => [...prev, "✅ Validação OK. Enviando JSON para API Piloto Audesp..."]);
+              // Step 3: Send to Audesp
+              setTransmissionLog(prev => [...prev, "✅ Validação local OK!", "🌐 Enviando para Audesp Piloto..."]);
+              console.log('[Transmit] All validations passed, sending to Audesp');
               
-              // Call the new service with CPF
-              const res = await sendPrestacaoContas(authTokenRef.current, formData, authCpf);
+              // Call the transmission service
+              let res: AudespResponse;
+              try {
+                  res = await sendPrestacaoContas(authTokenRef.current, formData, authCpf);
+                  console.log('[Transmit] Response received:', res);
+              } catch (sendError: any) {
+                  // Network or service error
+                  setTransmissionStatus('error');
+                  const errorMessage = sendError.message || String(sendError);
+                  setTransmissionLog(prev => [
+                      ...prev,
+                      "❌ ERRO NA TRANSMISSÃO:",
+                      errorMessage,
+                      "",
+                      "💡 SUGESTÕES:",
+                      "  • Verifique sua conexão com a internet",
+                      "  • Tente novamente em alguns segundos",
+                      "  • Se o erro persistir, contate o administrador"
+                  ]);
+                  setTransmissionErrors([{ 
+                      field: 'Transmissão', 
+                      message: errorMessage 
+                  }]);
+                  console.error('[Transmit] Transmission failed:', sendError);
+                  return;
+              }
               
-              // Handle Audesp Logic Status
+              // Step 4: Handle Audesp Response
+              console.log('[Transmit] Processing response, status:', res.status);
+              
               if (res.status === 'Rejeitado') {
                   setTransmissionStatus('error');
                   
@@ -197,15 +253,16 @@ const App: React.FC = () => {
                   
                   setTransmissionLog(prev => [
                       ...prev, 
-                      "❌ FALHA: Documento Rejeitado pelo Audesp.", 
-                      `Protocolo: ${res.protocolo}`,
                       "",
-                      "MOTIVOS DA REJEIÇÃO:",
+                      "❌ DOCUMENTO REJEITADO PELO AUDESP", 
+                      `📄 Protocolo: ${res.protocolo}`,
+                      "",
+                      "🔴 MOTIVOS DA REJEIÇÃO:",
                       ...rejectionErrors.map((e: any) => `  • ${e.campo || e.field}: ${e.mensagem || e.message}`)
                   ]);
               } else if (res.status === 'Armazenado') {
                   setTransmissionStatus('success');
-                  setTransmissionLog(prev => [...prev, "⚠️ ALERTA: Documento Armazenado com Ressalvas.", `Protocolo: ${res.protocolo}`]);
+                  setTransmissionLog(prev => [...prev, "", "⚠️  ALERTA: Documento Armazenado com Ressalvas.", `📄 Protocolo: ${res.protocolo}`]);
               } else {
                   setTransmissionStatus('success');
                   setTransmissionLog(prev => [...prev, "✅ SUCESSO: Documento Recebido.", `Protocolo: ${res.protocolo}`]);
@@ -525,12 +582,25 @@ const App: React.FC = () => {
           {/* Simple Log Modal (Shows while processing) */}
           {showTransmissionModal && !audespResult && (
               <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                  <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl overflow-hidden">
-                      <div className="p-4 border-b flex justify-between bg-slate-50">
-                          <h3 className="font-bold text-slate-800">
+                  <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl overflow-hidden">
+                      <div className="p-4 border-b flex justify-between items-center bg-gradient-to-r from-slate-50 to-slate-100">
+                          <h3 className="font-bold text-slate-800 text-lg">
                               {transmissionStatus === 'processing' ? '⏳ Processando Transmissão...' : 
                                transmissionStatus === 'error' ? '❌ Erro na Transmissão' : '✅ Transmissão Completa'}
                           </h3>
+                          <button
+                              onClick={() => {
+                                  setShowTransmissionModal(false);
+                                  setTransmissionLog([]);
+                                  setTransmissionErrors([]);
+                              }}
+                              className="text-slate-500 hover:text-slate-700 hover:bg-slate-200 rounded p-1 transition-colors"
+                              title="Fechar (ESC)"
+                          >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                          </button>
                       </div>
                       <div className="p-6 bg-slate-900 text-green-400 font-mono text-xs h-80 overflow-y-auto whitespace-pre-wrap">
                           {transmissionLog.join('\n')}
