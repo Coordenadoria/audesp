@@ -2,6 +2,7 @@
 import { PrestacaoContas, AudespResponse, TipoDocumentoDescritor } from '../types';
 import { saveProtocol } from './protocolService';
 import { AuditLogger } from './auditService';
+import { PermissionService } from './permissionService';
 
 /**
  * TRANSMISSION SERVICE
@@ -49,8 +50,27 @@ export async function sendPrestacaoContas(token: string, data: PrestacaoContas, 
       throw new Error(`Tipo de documento não mapeado: ${tipoDoc}`);
   }
 
+  // Validar permissões antes de enviar
+  console.log(`[Transmission] Validando permissões para: ${tipoDoc}`);
+  const permissionCheck = await PermissionService.validateTransmissionPermission(tipoDoc, token, cpf);
+  
+  if (!permissionCheck.hasPermission) {
+    const errorMessage = permissionCheck.reason || 'Permissão negada';
+    console.error('[Transmission] Falha na validação de permissão:', errorMessage);
+    
+    // Log permission check failure in audit
+    AuditLogger.logTransmission(
+      tipoDoc,
+      null,
+      'PERMISSION_DENIED',
+      errorMessage
+    );
+    
+    throw new Error(`❌ Validação de Permissão Falhou:\n${errorMessage}`);
+  }
+
   const fullUrl = `${API_BASE}${endpoint}`;
-  console.log(`[Transmission] Enviando para: ${fullUrl}`);
+  console.log(`[Transmission] ✓ Permissões validadas. Enviando para: ${fullUrl}`);
   console.log(`[Transmission] Token info:`, {
       hasToken: !!token,
       tokenLength: token.length,
@@ -62,10 +82,30 @@ export async function sendPrestacaoContas(token: string, data: PrestacaoContas, 
   const payload = data; 
 
   // ERRO 400 FIX (Multipart): O servidor exige multipart/form-data.
+  // IMPORTANTE: Enviar como texto simples, não como arquivo
   const formData = new FormData();
-  const jsonBlob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
-  
-  formData.append('documentoJSON', jsonBlob, `prestacao_${data.descritor.entidade}_${data.descritor.mes}_${data.descritor.ano}.json`);
+  const jsonString = JSON.stringify(payload);
+  formData.append('documentoJSON', jsonString);
+
+  // Debug: Log estrutura do JSON
+  console.log('[Transmission] JSON Payload Structure:', {
+    descritor: payload.descritor,
+    hasCodigo: !!payload.codigo_ajuste,
+    hasRetificacao: 'retificacao' in payload,
+    totalFields: Object.keys(payload).length,
+    jsonSize: jsonString.length + ' bytes'
+  });
+
+  // Validar campos obrigatórios
+  if (!payload.descritor) {
+    throw new Error('❌ Campo obrigatório faltando: descritor');
+  }
+  if (!('codigo_ajuste' in payload)) {
+    console.warn('⚠️ Campo pode ser obrigatório: codigo_ajuste');
+  }
+  if (!('retificacao' in payload)) {
+    console.warn('⚠️ Campo pode ser obrigatório: retificacao');
+  }
 
   try {
     // Setup timeout with AbortController
@@ -77,6 +117,9 @@ export async function sendPrestacaoContas(token: string, data: PrestacaoContas, 
       headers: {
         'Authorization': token.startsWith('Bearer ') ? token : `Bearer ${token}`,
         'Accept': 'application/json',
+        'Origin': 'https://audesp-piloto.tce.sp.gov.br',
+        'Referer': 'https://audesp-piloto.tce.sp.gov.br/',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         ...(cpf && { 'X-User-CPF': cpf })
       },
       body: formData,
@@ -94,6 +137,9 @@ export async function sendPrestacaoContas(token: string, data: PrestacaoContas, 
     console.log(`[Transmission] Request headers:`, {
       'Authorization': authHeader['Authorization']?.substring(0, 40) + '...',
       'Accept': 'application/json',
+      'Origin': authHeader['Origin'],
+      'Referer': authHeader['Referer'],
+      'User-Agent': authHeader['User-Agent']?.substring(0, 50) + '...',
       'X-User-CPF': cpf || 'não informado',
       'Content-Type': 'multipart/form-data (auto)'
     });
@@ -101,6 +147,11 @@ export async function sendPrestacaoContas(token: string, data: PrestacaoContas, 
     console.log(`[Transmission] Method: POST`);
     console.log(`[Transmission] Environment: ${process.env.NODE_ENV}`);
     console.log(`[Transmission] Is Localhost: ${fullUrl.includes('proxy')}`);
+    console.log(`[Transmission] Full Request URL: ${fullUrl}`);
+    console.log(`[Transmission] Form data fields:`, {
+      hasDocumentoJSON: formData.has('documentoJSON'),
+      documentoJSONSize: formData.get('documentoJSON')?.toString().length + ' bytes'
+    });
 
     let response: Response;
     try {
@@ -127,6 +178,7 @@ export async function sendPrestacaoContas(token: string, data: PrestacaoContas, 
     if (!response.ok) {
         // Formata erro JSON para exibição amigável
         const errorDetails = JSON.stringify(result, null, 2);
+        const errorCode = `TRANS-${response.status}-${Date.now().toString().slice(-6)}`;
         
         // Adicionar contexto de debugging para erro 401
         if (response.status === 401) {
@@ -150,7 +202,7 @@ PRÓXIMOS PASSOS:
 1. Verifique se o seu CPF tem permissão para "Prestação de Contas de Convênio"
 2. Faça logout e login novamente para renovar o token
 3. Contate o suporte Audesp: suporte@audesp.tce.sp.gov.br
-4. Mencione o código de erro: TRANS-401-${Date.now().toString().slice(-6)}`;
+4. Mencione o código de erro: ${errorCode}`;
             
             console.error(diagnosticInfo);
             
@@ -168,7 +220,54 @@ ${result.message || 'Credencial não reconhecida pela API Audesp'}
 • Use as credenciais de um CPF autorizado pela Audesp
 • Se o erro persistir, contate o suporte
 
-Código: TRANS-401-${Date.now().toString().slice(-6)}`;
+Código: ${errorCode}`;
+            
+            throw new Error(userMessage);
+        }
+
+        // Adicionar contexto de debugging para erro 403
+        if (response.status === 403) {
+            const diagnosticInfo = `[Transmission] 403 Forbidden - Diagnosticando:
+1. Token válido: ${token ? 'SIM (length: ' + token.length + ')' : 'NÃO'}
+2. CPF informado: ${cpf || 'NÃO'}
+3. Tipo de Documento: ${tipoDoc}
+4. Endpoint: ${fullUrl}
+5. Response: ${errorDetails}
+
+🔍 DIAGNÓSTICO DO ERRO 403:
+Este erro significa que o usuário NÃO TEM PERMISSÃO para realizar esta operação.
+Possíveis causas:
+1. O CPF ${cpf || '(não informado)'} não tem permissão específica para transmitir "${tipoDoc}"
+2. O perfil de acesso no Audesp não inclui esta funcionalidade
+3. O acesso foi revogado ou suspenso temporariamente
+4. Ambiente Piloto vs Produção pode ter permissões diferentes
+5. CPF não foi validado/certificado pela instituição responsável
+
+PRÓXIMOS PASSOS:
+1. ✓ Verifique com o administrador se seu CPF está autorizado para transmitir
+2. ✓ Tente com outro CPF que você sabe que tem permissão
+3. ✓ Faça logout e login novamente (às vezes resolve)
+4. ✓ Contate o suporte Audesp: suporte@audesp.tce.sp.gov.br
+5. ✓ Mencione: CPF: ${cpf || 'não informado'}, Tipo Doc: ${tipoDoc}, Código: ${errorCode}`;
+            
+            console.error(diagnosticInfo);
+            
+            // Lançar erro com mensagem amigável para o usuário
+            const userMessage = `❌ Acesso Negado (403):
+${result.message || 'Você não possui permissão para transmitir este documento'}
+
+⚠️ Verifique com o Administrador:
+• Seu CPF está autorizado para transmitir?
+• Seu perfil no Audesp inclui esta operação?
+• Suas permissões foram revogadas?
+
+💡 PRÓXIMAS AÇÕES:
+• Tente fazer login com outro CPF autorizado
+• Se correto, clique "Fazer Login Novamente"
+• Contate: suporte@audesp.tce.sp.gov.br
+• Compartilhe o código: ${errorCode}
+
+Tipo de Documento: ${tipoDoc}`;
             
             throw new Error(userMessage);
         }
