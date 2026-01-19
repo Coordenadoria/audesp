@@ -44,6 +44,10 @@ const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [authCpf, setAuthCpf] = useState<string>('');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [authEnvironment, setAuthEnvironment] = useState<'piloto' | 'producao'>('piloto');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [activeTab, setActiveTab] = useState<string>('form');
 
   const authTokenRef = useRef<string | null>(authToken);
 
