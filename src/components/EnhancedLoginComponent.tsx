@@ -16,10 +16,8 @@ const EnhancedLoginComponent: React.FC<LoginProps> = ({
   onError
 }) => {
   const [environment, setEnvironment] = useState<Environment>('piloto');
-  const [loginType, setLoginType] = useState<'cpf' | 'email'>('cpf');
-  const [cpf, setCpf] = useState('22586034805');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('M@dmax2026');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
@@ -32,42 +30,33 @@ const EnhancedLoginComponent: React.FC<LoginProps> = ({
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const credential = loginType === 'cpf' ? cpf : email;
-    if (!credential || !password) {
-      onError(`${loginType === 'cpf' ? 'CPF' : 'Email'} e senha são obrigatórios`);
+    if (!email || !password) {
+      onError('Email e senha são obrigatórios');
       return;
     }
 
-    // Validar email se for email
-    if (loginType === 'email') {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        onError('Email inválido');
-        return;
-      }
+    // Validar email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      onError('Email inválido');
+      return;
     }
 
     setIsLoading(true);
 
     try {
       const token = await EnhancedAuthService.login({
-        cpf: loginType === 'cpf' ? cpf : '',
-        email: loginType === 'email' ? email : '',
+        email,
         password
       });
 
       // Salvar preferência de ambiente
       if (rememberMe) {
         localStorage.setItem('audesp_last_environment', environment);
-        if (loginType === 'cpf') {
-          localStorage.setItem('audesp_last_cpf', cpf);
-        } else {
-          localStorage.setItem('audesp_last_email', email);
-        }
-        localStorage.setItem('audesp_last_login_type', loginType);
+        localStorage.setItem('audesp_last_email', email);
       }
 
-      onLoginSuccess(token.token, environment, loginType === 'cpf' ? cpf : email);
+      onLoginSuccess(token.token, environment, email);
     } catch (error: any) {
       onError(error.message || 'Erro ao fazer login');
     } finally {
@@ -152,64 +141,21 @@ const EnhancedLoginComponent: React.FC<LoginProps> = ({
 
           {/* FORMULÁRIO */}
           <form onSubmit={handleLogin} className="space-y-4">
-            {/* ABAS DE LOGIN - CPF / EMAIL */}
-            <div className="flex border-b border-slate-200 mb-4">
-              <button
-                type="button"
-                onClick={() => setLoginType('cpf')}
-                className={`flex-1 py-2 font-bold text-sm transition-colors ${
-                  loginType === 'cpf'
-                    ? 'text-blue-600 border-b-2 border-blue-600'
-                    : 'text-slate-500 hover:text-slate-700'
-                }`}
-              >
-                💳 CPF
-              </button>
-              <button
-                type="button"
-                onClick={() => setLoginType('email')}
-                className={`flex-1 py-2 font-bold text-sm transition-colors ${
-                  loginType === 'email'
-                    ? 'text-blue-600 border-b-2 border-blue-600'
-                    : 'text-slate-500 hover:text-slate-700'
-                }`}
-              >
+            {/* EMAIL */}
+            <div>
+              <label className="block text-xs font-bold uppercase text-slate-600 mb-2">
                 📧 Email
-              </button>
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="seu.email@dominio.com"
+                className="w-full h-11 px-4 border border-slate-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition text-slate-700 placeholder:text-slate-400"
+                disabled={isLoading}
+                required
+              />
             </div>
-
-            {/* CPF OU EMAIL */}
-            {loginType === 'cpf' ? (
-              <div>
-                <label className="block text-xs font-bold uppercase text-slate-600 mb-2">
-                  CPF
-                </label>
-                <input
-                  type="text"
-                  value={cpf}
-                  onChange={(e) => setCpf(e.target.value.replace(/\D/g, '').slice(0, 11))}
-                  placeholder="123.456.789-00"
-                  className="w-full h-11 px-4 border border-slate-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition text-slate-700 placeholder:text-slate-400"
-                  disabled={isLoading}
-                  required
-                />
-              </div>
-            ) : (
-              <div>
-                <label className="block text-xs font-bold uppercase text-slate-600 mb-2">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="seu.email@exemplo.com"
-                  className="w-full h-11 px-4 border border-slate-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition text-slate-700 placeholder:text-slate-400"
-                  disabled={isLoading}
-                  required
-                />
-              </div>
-            )}
 
             {/* SENHA */}
             <div>
@@ -250,7 +196,7 @@ const EnhancedLoginComponent: React.FC<LoginProps> = ({
                 htmlFor="rememberMe"
                 className="text-sm text-slate-600 cursor-pointer"
               >
-                Lembrar ambiente e CPF
+                Lembrar ambiente e email
               </label>
             </div>
 
@@ -282,8 +228,11 @@ const EnhancedLoginComponent: React.FC<LoginProps> = ({
             <p className="text-xs text-slate-600">
               <strong>Ambiente:</strong>{' '}
               {environment === 'piloto'
-                ? '🧪 Teste (dados não-reais)'
-                : '🚀 Produção (dados reais)'}
+                ? '🧪 Teste'
+                : '🚀 Produção'}
+            </p>
+            <p className="text-xs text-slate-500 mt-2">
+              <strong>Login via Email</strong>
             </p>
           </div>
         </div>
