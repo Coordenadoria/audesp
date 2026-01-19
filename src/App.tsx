@@ -327,11 +327,17 @@ const App: React.FC = () => {
                     if (jsonMatch) {
                       errorObject = JSON.parse(jsonMatch[0]);
                     }
-                  } catch {}
+                  } catch (parseErr) {
+                    console.debug('[Transmit] Could not parse error JSON:', parseErr);
+                  }
                   
-                  // Show ErrorHelpPanel
-                  setErrorPanelData(formData);
-                  setErrorPanelDiagnostics(ErrorDiagnosticsService.diagnoseError(errorObject));
+                  console.log('[Transmit] Parsed error object:', errorObject);
+                  
+                  // Show ErrorHelpPanel with error details
+                  setErrorPanelData(errorObject);
+                  const diagnostics = ErrorDiagnosticsService.diagnoseError(errorObject);
+                  console.log('[Transmit] Generated diagnostics:', diagnostics);
+                  setErrorPanelDiagnostics(diagnostics);
                   setShowErrorPanel(true);
                   
                   setTransmissionLog(prev => [
@@ -802,9 +808,9 @@ const App: React.FC = () => {
           )}
 
           {/* Error Help Panel Modal */}
-          {showErrorPanel && errorPanelData && (
+          {showErrorPanel && (
               <ErrorHelpPanel
-                  error={errorPanelData}
+                  error={errorPanelData || {}}
                   jsonData={formData}
                   diagnostics={errorPanelDiagnostics}
                   onDismiss={() => {
