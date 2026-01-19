@@ -29,6 +29,8 @@ const App: React.FC = () => {
   
   // New State for Detailed Result
   const [audespResult, setAudespResult] = useState<AudespResponse | null>(null);
+  const [transmissionStatus, setTransmissionStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
+  const [transmissionErrors, setTransmissionErrors] = useState<{ field: string; message: string }[]>([]);
 
   // Validation State (Computed)
   const sectionStatus = useMemo(() => getAllSectionsStatus(formData), [formData]);
@@ -131,6 +133,7 @@ const App: React.FC = () => {
       setShowTransmissionModal(true);
       setTransmissionStatus('processing');
       setTransmissionLog(["Iniciando processo de transmissão..."]);
+      setTransmissionErrors([]);
       setAudespResult(null);
       
       setTimeout(async () => {
@@ -147,11 +150,34 @@ const App: React.FC = () => {
               
               if (errors.length > 0 || consistencyErrors.length > 0) {
                   setTransmissionStatus('error');
-                  setTransmissionLog(["ERRO DE VALIDAÇÃO LOCAL:", ...errors, ...consistencyErrors]);
+                  
+                  // Parse errors to extract field names and messages
+                  const parsedErrors = [
+                      ...errors.map((err, idx) => {
+                          const match = err.match(/Campo: (.+?)\s*(?:\||$)/);
+                          const field = match ? match[1] : `Erro ${idx + 1}`;
+                          return { field, message: err };
+                      }),
+                      ...consistencyErrors.map((err, idx) => {
+                          const match = err.match(/Campo: (.+?)\s*(?:\||$)/);
+                          const field = match ? match[1] : `Consistência ${idx + 1}`;
+                          return { field, message: err };
+                      })
+                  ];
+                  
+                  setTransmissionErrors(parsedErrors);
+                  setTransmissionLog([
+                      "❌ ERRO DE VALIDAÇÃO LOCAL:",
+                      `${errors.length} erro(s) de validação encontrado(s)`,
+                      `${consistencyErrors.length} erro(s) de consistência encontrado(s)`,
+                      "",
+                      "CAMPOS COM PROBLEMAS:",
+                      ...parsedErrors.map(e => `  • ${e.field}: ${e.message}`)
+                  ]);
                   return;
               }
 
-              setTransmissionLog(prev => [...prev, "Validação OK. Enviando JSON para API Piloto Audesp..."]);
+              setTransmissionLog(prev => [...prev, "✅ Validação OK. Enviando JSON para API Piloto Audesp..."]);
               
               // Call the new service with CPF
               const res = await sendPrestacaoContas(authTokenRef.current, formData, authCpf);
@@ -159,13 +185,30 @@ const App: React.FC = () => {
               // Handle Audesp Logic Status
               if (res.status === 'Rejeitado') {
                   setTransmissionStatus('error');
-                  setTransmissionLog(prev => [...prev, "FALHA: Documento Rejeitado pelo Audesp.", `Protocolo: ${res.protocolo}`]);
+                  
+                  // Extract rejection reasons if available
+                  const rejectionErrors = (res as any).erros || [];
+                  setTransmissionErrors(
+                      rejectionErrors.map((err: any) => ({
+                          field: err.campo || err.field || 'Desconhecido',
+                          message: err.mensagem || err.message || JSON.stringify(err)
+                      }))
+                  );
+                  
+                  setTransmissionLog(prev => [
+                      ...prev, 
+                      "❌ FALHA: Documento Rejeitado pelo Audesp.", 
+                      `Protocolo: ${res.protocolo}`,
+                      "",
+                      "MOTIVOS DA REJEIÇÃO:",
+                      ...rejectionErrors.map((e: any) => `  • ${e.campo || e.field}: ${e.mensagem || e.message}`)
+                  ]);
               } else if (res.status === 'Armazenado') {
                   setTransmissionStatus('success');
-                  setTransmissionLog(prev => [...prev, "ALERTA: Documento Armazenado com Ressalvas.", `Protocolo: ${res.protocolo}`]);
+                  setTransmissionLog(prev => [...prev, "⚠️ ALERTA: Documento Armazenado com Ressalvas.", `Protocolo: ${res.protocolo}`]);
               } else {
                   setTransmissionStatus('success');
-                  setTransmissionLog(prev => [...prev, "SUCESSO: Documento Recebido.", `Protocolo: ${res.protocolo}`]);
+                  setTransmissionLog(prev => [...prev, "✅ SUCESSO: Documento Recebido.", `Protocolo: ${res.protocolo}`]);
               }
 
               // Show detailed result modal
@@ -184,7 +227,7 @@ const App: React.FC = () => {
                   // Not JSON, use original string
               }
 
-              setTransmissionLog(prev => [...prev, "ERRO TÉCNICO NA TRANSMISSÃO:", errorMessage]);
+              setTransmissionLog(prev => [...prev, "❌ ERRO TÉCNICO NA TRANSMISSÃO:", errorMessage]);
               
               if (errorMessage.includes("401") || errorMessage.includes("Unauthorized")) {
                   setTimeout(() => handleLogout(), 3000);
@@ -484,10 +527,38 @@ const App: React.FC = () => {
               <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
                   <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl overflow-hidden">
                       <div className="p-4 border-b flex justify-between bg-slate-50">
-                          <h3 className="font-bold text-slate-800">Processando Transmissão...</h3>
+                          <h3 className="font-bold text-slate-800">
+                              {transmissionStatus === 'processing' ? '⏳ Processando Transmissão...' : 
+                               transmissionStatus === 'error' ? '❌ Erro na Transmissão' : '✅ Transmissão Completa'}
+                          </h3>
                       </div>
                       <div className="p-6 bg-slate-900 text-green-400 font-mono text-xs h-80 overflow-y-auto whitespace-pre-wrap">
                           {transmissionLog.join('\n')}
+                      </div>
+                      {transmissionStatus === 'error' && transmissionErrors.length > 0 && (
+                          <div className="border-t bg-red-50 p-4">
+                              <h4 className="font-bold text-red-700 mb-3">🔴 Campos com Problemas:</h4>
+                              <div className="space-y-2 max-h-48 overflow-y-auto">
+                                  {transmissionErrors.map((err, idx) => (
+                                      <div key={idx} className="bg-white p-2 rounded border-l-4 border-red-500">
+                                          <div className="font-bold text-red-700">{err.field}</div>
+                                          <div className="text-sm text-red-600">{err.message}</div>
+                                      </div>
+                                  ))}
+                              </div>
+                          </div>
+                      )}
+                      <div className="p-4 border-t bg-slate-50 flex justify-end gap-2">
+                          <button
+                              onClick={() => {
+                                  setShowTransmissionModal(false);
+                                  setTransmissionLog([]);
+                                  setTransmissionErrors([]);
+                              }}
+                              className="px-4 py-2 bg-slate-600 text-white rounded font-bold hover:bg-slate-700"
+                          >
+                              Fechar
+                          </button>
                       </div>
                   </div>
               </div>
