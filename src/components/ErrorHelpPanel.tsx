@@ -14,6 +14,7 @@ interface ErrorHelpPanelProps {
   onRetry?: () => void;
   onAutoFix?: (fixedData: any) => void;
   jsonData?: any;
+  diagnostics?: ErrorDiagnostic[];
 }
 
 export const ErrorHelpPanel: React.FC<ErrorHelpPanelProps> = ({
@@ -21,7 +22,8 @@ export const ErrorHelpPanel: React.FC<ErrorHelpPanelProps> = ({
   onDismiss,
   onRetry,
   onAutoFix,
-  jsonData
+  jsonData,
+  diagnostics: providedDiagnostics
 }) => {
   const [diagnostics, setDiagnostics] = React.useState<ErrorDiagnostic[]>([]);
   const [expandedDiag, setExpandedDiag] = React.useState<number | null>(0);
@@ -29,9 +31,13 @@ export const ErrorHelpPanel: React.FC<ErrorHelpPanelProps> = ({
   const [editedJSON, setEditedJSON] = React.useState(jsonData);
 
   React.useEffect(() => {
-    const diags = ErrorDiagnosticsService.diagnoseError(error);
-    setDiagnostics(diags);
-  }, [error]);
+    if (providedDiagnostics && providedDiagnostics.length > 0) {
+      setDiagnostics(providedDiagnostics);
+    } else {
+      const diags = ErrorDiagnosticsService.diagnoseError(error);
+      setDiagnostics(diags);
+    }
+  }, [error, providedDiagnostics]);
 
   const handleAutoFix = () => {
     if (onAutoFix && jsonData) {

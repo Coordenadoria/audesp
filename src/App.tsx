@@ -10,10 +10,12 @@ import { FormSections } from './components/FormSections';
 import { FullReportImporter } from './components/FullReportImporter';
 import { TransmissionResult } from './components/TransmissionResult';
 import { CredentialsModal } from './components/CredentialsModal';
+import { ErrorHelpPanel } from './components/ErrorHelpPanel';
 import ReportsDashboard from './components/ReportsDashboard';
 import EnhancedLoginComponent from './components/EnhancedLoginComponent';
 import BatchPDFImporter from './components/BatchPDFImporter';
 import ValidationDashboard from './components/ValidationDashboard';
+import ErrorDiagnosticsService, { ErrorDiagnostic } from './services/errorDiagnosticsService';
 
 interface Notification {
     message: string;
@@ -35,6 +37,11 @@ const App: React.FC = () => {
 
   // Credentials Modal State
   const [showCredentialsModal, setShowCredentialsModal] = useState(false);
+
+  // Error Help Panel State
+  const [showErrorPanel, setShowErrorPanel] = useState(false);
+  const [errorPanelData, setErrorPanelData] = useState<any>(null);
+  const [errorPanelDiagnostics, setErrorPanelDiagnostics] = useState<ErrorDiagnostic[]>([]);
 
   // Validation State (Computed)
   const sectionStatus = useMemo(() => getAllSectionsStatus(formData), [formData]);
@@ -307,12 +314,33 @@ const App: React.FC = () => {
                   // Network or service error
                   setTransmissionStatus('error');
                   const errorMessage = sendError.message || String(sendError);
+                  
+                  // Parse error for ErrorHelpPanel
+                  let errorObject: any = {
+                    status: 0,
+                    message: errorMessage
+                  };
+                  
+                  // Try to extract JSON error from message
+                  try {
+                    const jsonMatch = errorMessage.match(/\{[\s\S]*\}/);
+                    if (jsonMatch) {
+                      errorObject = JSON.parse(jsonMatch[0]);
+                    }
+                  } catch {}
+                  
+                  // Show ErrorHelpPanel
+                  setErrorPanelData(formData);
+                  setErrorPanelDiagnostics(ErrorDiagnosticsService.diagnoseError(errorObject));
+                  setShowErrorPanel(true);
+                  
                   setTransmissionLog(prev => [
                       ...prev,
                       "❌ ERRO NA TRANSMISSÃO:",
                       errorMessage,
                       "",
                       "💡 SUGESTÕES:",
+                      "  • Clique em '📄 Ver JSON com Erros' para análise detalhada",
                       "  • Verifique sua conexão com a internet",
                       "  • Tente novamente em alguns segundos",
                       "  • Se o erro persistir, contate o administrador"
@@ -770,6 +798,28 @@ const App: React.FC = () => {
               <TransmissionResult 
                   result={audespResult} 
                   onClose={() => setAudespResult(null)} 
+              />
+          )}
+
+          {/* Error Help Panel Modal */}
+          {showErrorPanel && errorPanelData && (
+              <ErrorHelpPanel
+                  error={errorPanelData}
+                  jsonData={formData}
+                  diagnostics={errorPanelDiagnostics}
+                  onDismiss={() => {
+                      setShowErrorPanel(false);
+                      setErrorPanelData(null);
+                  }}
+                  onRetry={() => {
+                      setShowErrorPanel(false);
+                      handleTransmit();
+                  }}
+                  onAutoFix={(fixedData) => {
+                      setFormData(fixedData);
+                      setShowErrorPanel(false);
+                      setTransmissionLog(prev => [...prev, "", "✨ JSON corrigido automaticamente"]);
+                  }}
               />
           )}
       </div>

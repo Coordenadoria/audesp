@@ -61,9 +61,17 @@ export class ErrorDiagnosticsService {
         'PERM_403',
         'Permissão',
         'error',
-        'Acesso negado',
-        'Usuário não tem permissão para esta ação',
-        'Contate administrador para solicitar permissão de transmissão.',
+        'Acesso negado - O usuário não possui autorização',
+        'Você tentou acessar um recurso para o qual não tem permissão. Possíveis causas:\n\n' +
+        '1. CPF/Email sem permissão para transmitir este tipo de documento\n' +
+        '2. Credencial não reconhecida como validada no Audesp\n' +
+        '3. Acesso revogado ou suspenso\n' +
+        '4. Ambiente (Piloto vs Produção) pode ter permissões diferentes',
+        'AÇÕES RECOMENDADAS:\n\n' +
+        '1. Clique "Fazer Login Novamente" e use outro CPF/Email autorizado\n' +
+        '2. Verifique com administrador Audesp se sua credencial está ativa\n' +
+        '3. Se está usando Piloto, tente no ambiente Produção\n' +
+        '4. Contate: suporte@audesp.tce.sp.gov.br com seu CPF/Email',
         'erro_403'
       ));
     }

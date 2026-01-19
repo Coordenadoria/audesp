@@ -255,7 +255,7 @@ export const JSONErrorViewer: React.FC<JSONErrorViewerProps> = ({
         <div className="ml-4">
           {renderValue(jsonData, '$', 0)}
         </div>
-        <span className="text-blue-400">{'}'}}</span>
+        <span className="text-blue-400">{'}'}</span>
       </div>
     </div>
   );
