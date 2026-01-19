@@ -150,6 +150,24 @@ const App: React.FC = () => {
       showToast(error, "error");
   };
 
+  const handleRetryWithNewLogin = () => {
+      // Clear old tokens
+      sessionStorage.removeItem('audesp_token');
+      sessionStorage.removeItem('audesp_expire');
+      localStorage.removeItem('audesp_token');
+      
+      // Close transmission modal
+      setShowTransmissionModal(false);
+      setTransmissionLog([]);
+      setTransmissionErrors([]);
+      setAudespResult(null);
+      
+      // Logout and go to login
+      handleLogout();
+      setActiveSection('dashboard');
+      showToast("🔄 Faça login novamente para obter um novo token", "info");
+  };
+
   const handleTransmit = () => {
       // Show credentials modal first before transmission
       setShowCredentialsModal(true);
@@ -702,16 +720,46 @@ const App: React.FC = () => {
                           </div>
                       )}
                       <div className="p-4 border-t bg-slate-50 flex justify-end gap-2">
-                          <button
-                              onClick={() => {
-                                  setShowTransmissionModal(false);
-                                  setTransmissionLog([]);
-                                  setTransmissionErrors([]);
-                              }}
-                              className="px-4 py-2 bg-slate-600 text-white rounded font-bold hover:bg-slate-700"
-                          >
-                              Fechar
-                          </button>
+                          {transmissionStatus === 'error' && (
+                              <>
+                                  <button
+                                      onClick={handleRetryWithNewLogin}
+                                      className="px-4 py-2 bg-blue-600 text-white rounded font-bold hover:bg-blue-700 transition-colors"
+                                  >
+                                      🔄 Fazer Login Novamente
+                                  </button>
+                                  <button
+                                      onClick={() => {
+                                          setShowTransmissionModal(false);
+                                          setTransmissionLog([]);
+                                          setTransmissionErrors([]);
+                                      }}
+                                      className="px-4 py-2 bg-slate-600 text-white rounded font-bold hover:bg-slate-700"
+                                  >
+                                      Fechar
+                                  </button>
+                              </>
+                          )}
+                          {transmissionStatus === 'processing' && (
+                              <button
+                                  disabled
+                                  className="px-4 py-2 bg-slate-400 text-white rounded font-bold cursor-not-allowed"
+                              >
+                                  Processando...
+                              </button>
+                          )}
+                          {transmissionStatus === 'success' && (
+                              <button
+                                  onClick={() => {
+                                      setShowTransmissionModal(false);
+                                      setTransmissionLog([]);
+                                      setTransmissionErrors([]);
+                                  }}
+                                  className="px-4 py-2 bg-green-600 text-white rounded font-bold hover:bg-green-700"
+                              >
+                                  Fechar
+                              </button>
+                          )}
                       </div>
                   </div>
               </div>

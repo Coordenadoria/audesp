@@ -163,8 +163,12 @@ ${result.message || 'Credencial não reconhecida pela API Audesp'}
 • Seu CPF tem permissão para transmitir?
 • Você está no ambiente correto (Piloto/Produção)?
 
-💡 Se o problema persistir:
-Contate o suporte Audesp com o código: TRANS-401-${Date.now().toString().slice(-6)}`;
+💡 SOLUÇÃO:
+• Clique em "Fazer Login Novamente" para obter um novo token
+• Use as credenciais de um CPF autorizado pela Audesp
+• Se o erro persistir, contate o suporte
+
+Código: TRANS-401-${Date.now().toString().slice(-6)}`;
             
             throw new Error(userMessage);
         }
