@@ -6,6 +6,7 @@
 
 import React from 'react';
 import ErrorDiagnosticsService, { ErrorDiagnostic } from '../services/errorDiagnosticsService';
+import JSONErrorViewer from './JSONErrorViewer';
 
 interface ErrorHelpPanelProps {
   error: any;
@@ -24,6 +25,8 @@ export const ErrorHelpPanel: React.FC<ErrorHelpPanelProps> = ({
 }) => {
   const [diagnostics, setDiagnostics] = React.useState<ErrorDiagnostic[]>([]);
   const [expandedDiag, setExpandedDiag] = React.useState<number | null>(0);
+  const [showJSON, setShowJSON] = React.useState(false);
+  const [editedJSON, setEditedJSON] = React.useState(jsonData);
 
   React.useEffect(() => {
     const diags = ErrorDiagnosticsService.diagnoseError(error);
@@ -82,7 +85,7 @@ export const ErrorHelpPanel: React.FC<ErrorHelpPanelProps> = ({
         </div>
 
         {/* Content */}
-        <div className="px-6 py-6 max-h-[60vh] overflow-y-auto">
+        <div className="px-6 py-6 max-h-[70vh] overflow-y-auto">
           {/* Summary */}
           <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <h3 className="font-bold text-blue-900 mb-2">📋 Resumo</h3>
@@ -93,6 +96,52 @@ export const ErrorHelpPanel: React.FC<ErrorHelpPanelProps> = ({
               )}
             </p>
           </div>
+
+          {/* JSON Viewer Button */}
+          <div className="mb-4">
+            <button
+              onClick={() => setShowJSON(!showJSON)}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition text-sm font-semibold"
+            >
+              <span>📄</span>
+              {showJSON ? '▼ Ocultar JSON' : '▶ Ver JSON com Erros'}
+            </button>
+          </div>
+
+          {/* JSON Error Viewer */}
+          {showJSON && jsonData && (
+            <div className="mb-6 bg-gray-100 p-4 rounded-lg border-2 border-gray-300">
+              <JSONErrorViewer
+                jsonData={editedJSON || jsonData}
+                diagnostics={diagnostics}
+                onEdit={(newData) => {
+                  setEditedJSON(newData);
+                }}
+              />
+              <div className="mt-3 flex gap-2">
+                <button
+                  onClick={() => {
+                    if (onAutoFix && editedJSON) {
+                      onAutoFix(editedJSON);
+                      onDismiss();
+                    }
+                  }}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm font-semibold"
+                >
+                  ✨ Usar JSON Corrigido
+                </button>
+                <button
+                  onClick={() => {
+                    setEditedJSON(jsonData);
+                    setShowJSON(false);
+                  }}
+                  className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition text-sm font-semibold"
+                >
+                  ↺ Resetar
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Diagnostics */}
           <div className="space-y-3">
