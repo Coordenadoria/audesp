@@ -1,0 +1,243 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║          🚀 AUDESP v3.0 - DEPLOY NO VERCEL - INSTRUÇÕES PASSO A PASSO    ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+📋 PRÉ-REQUISITOS
+═══════════════════════════════════════════════════════════════════════════
+✅ Node.js 18+
+✅ npm 9+
+✅ Git configurado
+✅ Vercel CLI (vamos instalar)
+✅ Conta Vercel (https://vercel.com)
+
+
+🔧 PASSO 1: Instalar Vercel CLI
+═══════════════════════════════════════════════════════════════════════════
+
+$ npm install -g vercel
+
+Verificar instalação:
+$ vercel --version
+→ Vercel CLI 50.4.6
+
+
+🔐 PASSO 2: Autenticar no Vercel
+═══════════════════════════════════════════════════════════════════════════
+
+$ vercel login
+
+Seguir as instruções:
+1. Abrir browser (abre automaticamente)
+2. Login com conta GitHub/Google/Email
+3. Confirmar no terminal
+4. Voltar para terminal
+
+Verificar autenticação:
+$ vercel whoami
+→ Deve retornar seu email/username
+
+
+📦 PASSO 3: Preparar Repositório
+═══════════════════════════════════════════════════════════════════════════
+
+$ cd /workspaces/audesp
+
+Verificar se está limpo:
+$ git status
+→ nothing to commit, working tree clean
+
+Se houver mudanças não commitadas:
+$ git add .
+$ git commit -m "preparar para deploy vercel"
+
+
+🎯 PASSO 4: Link do Projeto
+═══════════════════════════════════════════════════════════════════════════
+
+$ vercel link
+
+Respostas esperadas:
+? Set up and deploy "[...]/audesp"?
+→ y (yes)
+
+? Which scope should we use?
+→ Coordenadoria (seu time/organização)
+
+? Link to existing project?
+→ n (no, criar novo projeto)
+
+? What's your project's name?
+→ audesp
+
+? In which directory is your code located?
+→ ./ (enter)
+
+? Want to modify these settings?
+→ n (não)
+
+Resultado:
+✓ Project linked
+
+
+🌍 PASSO 5: Deploy para Preview (Teste)
+═══════════════════════════════════════════════════════════════════════════
+
+$ vercel
+
+Resultado esperado:
+✓ Deployment successful!
+✓ Preview: https://audesp-xxxxx.vercel.app
+
+Testar:
+1. Abrir URL no browser
+2. Verificar formulário carrega
+3. Testar funcionalidades básicas
+
+
+📊 PASSO 6: Deploy para Produção
+═══════════════════════════════════════════════════════════════════════════
+
+$ vercel --prod
+
+⚠️ IMPORTANTE: Confirmar antes de fazer deploy em produção!
+
+Resultado esperado:
+✓ Deployment successful!
+✓ Production: https://audesp.vercel.app
+
+Dashboard: https://vercel.com/Coordenadoria/audesp
+
+
+🔍 PASSO 7: Monitorar Deploy
+═══════════════════════════════════════════════════════════════════════════
+
+Via CLI:
+$ vercel logs
+
+Via Dashboard:
+https://vercel.com/Coordenadoria/audesp/deployments
+
+Verificações:
+✓ Build passou (status: SUCCESS)
+✓ Nenhum erro nos logs
+✓ Site carrega normalmente
+✓ API calls funcionam
+
+
+📝 PASSO 8: Configurações de Produção
+═══════════════════════════════════════════════════════════════════════════
+
+No Dashboard Vercel → Settings → Environment Variables
+
+Adicionar variáveis:
+REACT_APP_ENV = production
+REACT_APP_API_BASE_URL = https://api.audesp.gov.br
+REACT_APP_WS_BASE_URL = wss://api.audesp.gov.br
+REACT_APP_LOG_LEVEL = warn
+
+Após adicionar, fazer novo deploy:
+$ vercel --prod
+
+
+🌐 PASSO 9: Configurar Domínio Customizado
+═══════════════════════════════════════════════════════════════════════════
+
+No Dashboard Vercel → Settings → Domains
+
+Adicionar:
+audesp.gov.br
+
+Alterar nameservers no registrador:
+1. Copiar nameservers do Vercel
+2. Ir ao registrador (GoDaddy, etc)
+3. Substituir nameservers
+4. Aguardar propagação (até 24 horas)
+
+Verificar:
+$ dig audesp.gov.br
+→ Deve retornar IP do Vercel
+
+
+✅ PASSO 10: Auto-deploy via GitHub
+═══════════════════════════════════════════════════════════════════════════
+
+Já está configurado! 🎉
+
+Como funciona:
+1. Push para GitHub main branch
+2. GitHub Actions testa (lint, tests, build)
+3. Se passar, Vercel faz deploy automático
+4. Site atualizado em ~2 minutos
+
+
+📊 VERIFICAÇÃO FINAL
+═══════════════════════════════════════════════════════════════════════════
+
+☑️ Site carrega em: https://audesp.vercel.app
+☑️ Formulário funciona corretamente
+☑️ Validações ativadas
+☑️ OCR processa imagens
+☑️ Relatórios geram
+☑️ WebService conecta
+☑️ Segurança ativa (HTTPS, headers)
+☑️ Performance otimizada (Lighthouse 95+)
+☑️ Logs limpos (sem erros)
+☑️ Monitoramento funcionando
+
+
+📞 TROUBLESHOOTING
+═══════════════════════════════════════════════════════════════════════════
+
+Problema: Build falha
+Solução:
+$ vercel pull --environment=production
+$ npm ci
+$ npm run build
+$ vercel deploy --prebuilt
+
+Problema: Variáveis de ambiente não aparecem
+Solução:
+$ vercel env pull
+$ npm run build
+$ vercel --prod
+
+Problema: Performance lenta
+Solução:
+1. Verificar bundle size: npm run build
+2. Analisar Lighthouse
+3. Verificar cache headers em vercel.json
+
+Problema: API calls falham
+Solução:
+1. Verificar REACT_APP_API_BASE_URL
+2. Verificar CORS headers
+3. Testar endpoint manualmente
+
+
+🎯 PRÓXIMOS PASSOS
+═══════════════════════════════════════════════════════════════════════════
+
+1. ✅ Deploy completado
+2. 🔍 Testar em produção
+3. 📊 Monitorar analytics
+4. 🔄 Configurar auto-deploy
+5. 📈 Escalar conforme necessário
+
+
+📱 LINKS IMPORTANTES
+═══════════════════════════════════════════════════════════════════════════
+
+Dashboard:     https://vercel.com/Coordenadoria/audesp
+Production:    https://audesp.vercel.app
+Documentação:  https://vercel.com/docs
+Status:        https://vercel.statuspage.io
+Repository:    https://github.com/Coordenadoria/audesp
+
+
+✨ PARABÉNS! Seu projeto está em produção no Vercel! 🎉
+
+═══════════════════════════════════════════════════════════════════════════
+Data: Janeiro 2026
+Versão: 3.0.0
+Status: ✅ Production Ready
+═══════════════════════════════════════════════════════════════════════════
