@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang=\"pt-BR\">
+<head>
+  <meta charset=\"UTF-8\">
+  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
+  <title>🔐 Teste de Login - AUDESP</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+      align-items: start;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    .card h2 {
+      color: #333;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 24px;
+    }
+
+    .login-form {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    label {
+      font-weight: 600;
+      color: #333;
+      font-size: 14px;
+    }
+
+    input, select {
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: 14px;
+      transition: all 0.3s;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    input::placeholder {
+      color: #999;
+    }
+
+    .password-wrapper {
+      position: relative;
+    }
+
+    .toggle-password {
+      position: absolute;
+      right: 12px;
+      top: 12px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #667eea;
+      font-size: 18px;
+    }
+
+    .btn {
+      padding: 14px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: #f0f0f0;
+      color: #333;
+      margin-bottom: 10px;
+    }
+
+    .btn-secondary:hover {
+      background: #e0e0e0;
+    }
+
+    .message {
+      padding: 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      display: none;
+    }
+
+    .message.show {
+      display: block;
+    }
+
+    .message.success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    .message.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+
+    .message.info {
+      background: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+    }
+
+    .credentials-box {
+      background: #f8f9fa;
+      border: 2px solid #dee2e6;
+      border-radius: 6px;
+      padding: 15px;
+      margin-top: 15px;
+    }
+
+    .credential-item {
+      background: white;
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border-left: 3px solid #667eea;
+    }
+
+    .credential-item:hover {
+      background: #f0f0ff;
+      box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+    }
+
+    .credential-item.last {
+      margin-bottom: 0;
+    }
+
+    .credential-item code {
+      display: block;
+      font-size: 12px;
+      color: #666;
+      margin-top: 3px;
+      font-family: 'Courier New', monospace;
+    }
+
+    .credential-item strong {
+      color: #333;
+      font-size: 13px;
+    }
+
+    .result {
+      background: #f8f9fa;
+      border: 2px solid #dee2e6;
+      border-radius: 6px;
+      padding: 20px;
+      margin-top: 20px;
+      display: none;
+    }
+
+    .result.show {
+      display: block;
+    }
+
+    .result-item {
+      margin-bottom: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #dee2e6;
+    }
+
+    .result-item.last {
+      margin-bottom: 0;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+
+    .result-label {
+      font-weight: 600;
+      color: #333;
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+
+    .result-value {
+      color: #666;
+      font-size: 14px;
+      margin-top: 3px;
+      font-family: 'Courier New', monospace;
+      word-break: break-all;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+      color: white;
+    }
+
+    .header h1 {
+      font-size: 32px;
+      margin-bottom: 5px;
+    }
+
+    .header p {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+
+    .status-indicator {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 5px;
+    }
+
+    .status-indicator.success {
+      background: #28a745;
+    }
+
+    .status-indicator.error {
+      background: #dc3545;
+    }
+
+    .status-indicator.pending {
+      background: #ffc107;
+    }
+
+    .test-info {
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 12px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      font-size: 13px;
+      color: #856404;
+    }
+
+    .debug-log {
+      background: #1e1e1e;
+      color: #00ff00;
+      padding: 15px;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+      margin-top: 15px;
+      line-height: 1.5;
+    }
+
+    .debug-log-entry {
+      margin-bottom: 3px;
+      padding: 2px 0;
+    }
+
+    .debug-log-entry.success {
+      color: #00ff00;
+    }
+
+    .debug-log-entry.error {
+      color: #ff6b6b;
+    }
+
+    .debug-log-entry.info {
+      color: #6b9eff;
+    }
+
+    .debug-log-entry.warning {
+      color: #ffff00;
+    }
+  </style>
+</head>
+<body>
+  <div class=\"container\">
+    <!-- Formulário de Login -->
+    <div class=\"card\">
+      <h2>🔐 Formulário de Login</h2>
+      
+      <form id=\"loginForm\" class=\"login-form\">
+        <div class=\"test-info\">
+          💡 Sistema de teste AUDESP v1.9 - Use credenciais válidas ou clique em um exemplo
+        </div>
+
+        <div class=\"form-group\">
+          <label for=\"cpf\">CPF</label>
+          <input
+            id=\"cpf\"
+            type=\"text\"
+            placeholder=\"00000000000\"
+            maxlength=\"11\"
+            inputmode=\"numeric\"
+            required
+          >
+          <small style=\"color: #999; font-size: 12px;\">Digite 11 dígitos</small>
+        </div>
+
+        <div class=\"form-group\">
+          <label for=\"password\">Senha</label>
+          <div class=\"password-wrapper\">
+            <input
+              id=\"password\"
+              type=\"password\"
+              placeholder=\"••••••••\"
+              required
+            >
+            <button type=\"button\" class=\"toggle-password\" onclick=\"togglePassword()\">👁️</button>
+          </div>
+          <small style=\"color: #999; font-size: 12px;\">Mínimo 6 caracteres</small>
+        </div>
+
+        <div class=\"form-group\">
+          <label for=\"environment\">Ambiente</label>
+          <select id=\"environment\">
+            <option value=\"piloto\">🧪 Piloto (Teste)</option>
+            <option value=\"producao\">📊 Produção</option>
+          </select>
+        </div>
+
+        <button type=\"submit\" class=\"btn btn-primary\">
+          <span>🔓 Entrar no Sistema</span>
+        </button>
+
+        <div id=\"message\" class=\"message\"></div>
+      </form>
+
+      <!-- Credenciais de Teste -->
+      <div class=\"credentials-box\">
+        <strong style=\"display: block; margin-bottom: 10px;\">✅ Clique para preencher:</strong>
+        
+        <div class=\"credential-item\" onclick=\"preencheCred('00000000000', 'demo123')\">
+          <strong>Demo User</strong>
+          <code>CPF: 00000000000</code>
+          <code>Senha: demo123</code>
+        </div>
+
+        <div class=\"credential-item last\" onclick=\"preencheCred('12345678901', 'teste123')\">
+          <strong>Testador AUDESP</strong>
+          <code>CPF: 12345678901</code>
+          <code>Senha: teste123</code>
+        </div>
+      </div>
+    </div>
+
+    <!-- Resultado do Teste -->
+    <div class=\"card\">
+      <h2>📊 Resultado do Teste</h2>
+      
+      <div id=\"result\" class=\"result\">
+        <div id=\"resultContent\"></div>
+      </div>
+
+      <div id=\"debugLog\" class=\"debug-log\" style=\"display: none;\"></div>
+
+      <div style=\"margin-top: 20px; display: flex; gap: 10px;\">
+        <button class=\"btn btn-secondary\" onclick=\"limparResultado()\">🗑️ Limpar</button>
+        <button class=\"btn btn-secondary\" onclick=\"copiarResultado()\">📋 Copiar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const logs = [];
+
+    function addLog(message, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString('pt-BR');
+      logs.push({ timestamp, message, type });
+      
+      const logEl = document.getElementById('debugLog');
+      const entry = document.createElement('div');
+      entry.className = `debug-log-entry ${type}`;
+      entry.textContent = `[${timestamp}] ${message}`;
+      logEl.appendChild(entry);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function togglePassword() {
+      const input = document.getElementById('password');
+      input.type = input.type === 'password' ? 'text' : 'password';
+    }
+
+    function preencheCred(cpf, senha) {
+      document.getElementById('cpf').value = cpf;
+      document.getElementById('password').value = senha;
+      document.getElementById('cpf').focus();
+      addLog(`✅ Credenciais preenchidas: ${cpf}`, 'success');
+    }
+
+    function formatarCPF(cpf) {
+      return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+    }
+
+    function mostrarMensagem(texto, tipo) {
+      const msg = document.getElementById('message');
+      msg.textContent = texto;
+      msg.className = `message show ${tipo}`;
+    }
+
+    function validarForm(cpf, senha) {
+      if (!cpf.trim()) {
+        addLog('❌ CPF vazio', 'error');
+        mostrarMensagem('CPF é obrigatório', 'error');
+        return false;
+      }
+
+      if (cpf.length !== 11) {
+        addLog(`❌ CPF inválido: ${cpf.length} dígitos`, 'error');
+        mostrarMensagem('CPF deve ter exatamente 11 dígitos', 'error');
+        return false;
+      }
+
+      if (!senha.trim()) {
+        addLog('❌ Senha vazia', 'error');
+        mostrarMensagem('Senha é obrigatória', 'error');
+        return false;
+      }
+
+      if (senha.length < 6) {
+        addLog('❌ Senha muito curta', 'error');
+        mostrarMensagem('Senha deve ter pelo menos 6 caracteres', 'error');
+        return false;
+      }
+
+      return true;
+    }
+
+    function verificarCredenciais(cpf, senha) {
+      const mockUsers = {
+        '00000000000': { password: 'demo123', name: 'Usuário Demo' },
+        '12345678901': { password: 'teste123', name: 'Testador AUDESP' }
+      };
+
+      const user = mockUsers[cpf];
+      
+      if (!user) {
+        addLog(`❌ CPF ${cpf} não encontrado no banco de dados`, 'error');
+        return null;
+      }
+
+      if (user.password !== senha) {
+        addLog(`❌ Senha incorreta para CPF ${cpf}`, 'error');
+        return null;
+      }
+
+      return user;
+    }
+
+    async function processarLogin(cpf, senha, ambiente) {
+      addLog(`🔄 Iniciando processo de login...`, 'info');
+      
+      // Validação
+      if (!validarForm(cpf, senha)) {
+        return false;
+      }
+
+      addLog(`✅ Validação de formulário passou`, 'success');
+
+      // Simular atraso de rede
+      addLog(`⏳ Conectando ao servidor...`, 'warning');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Verificar credenciais
+      addLog(`🔍 Verificando credenciais...`, 'info');
+      const user = verificarCredenciais(cpf, senha);
+
+      if (!user) {
+        mostrarMensagem('Falha na autenticação', 'error');
+        return false;
+      }
+
+      addLog(`✅ Credenciais verificadas com sucesso`, 'success');
+
+      // Gerar token simulado
+      const token = btoa(JSON.stringify({ cpf, timestamp: Date.now() }));
+      addLog(`✅ Token gerado com sucesso`, 'success');
+
+      // Armazenar sesão
+      const session = {
+        cpf,
+        name: user.name,
+        environment: ambiente,
+        loginTime: new Date().toISOString(),
+        token: token,
+        role: 'operator',
+        loginDuration: '1 hora'
+      };
+
+      localStorage.setItem('audesp_session', JSON.stringify(session));
+      addLog(`✅ Sessão armazenada em localStorage`, 'success');
+
+      // Mostrar resultado
+      mostraResultado(session);
+      mostrarMensagem('✅ Login realizado com sucesso!', 'success');
+      addLog(`🎉 Login completo! Bem-vindo ${user.name}`, 'success');
+
+      return true;
+    }
+
+    function mostraResultado(session) {
+      const resultDiv = document.getElementById('result');
+      const content = document.getElementById('resultContent');
+
+      let html = `
+        <div class=\"result-item\">
+          <div class=\"result-label\">
+            <span class=\"status-indicator success\"></span>
+            Status
+          </div>
+          <div class=\"result-value\">✅ Autenticado com sucesso</div>
+        </div>
+
+        <div class=\"result-item\">
+          <div class=\"result-label\">👤 Nome do Usuário</div>
+          <div class=\"result-value\">${session.name}</div>
+        </div>
+
+        <div class=\"result-item\">
+          <div class=\"result-label\">🆔 CPF</div>
+          <div class=\"result-value\">${formatarCPF(session.cpf)}</div>
+        </div>
+
+        <div class=\"result-item\">
+          <div class=\"result-label\">🧪 Ambiente</div>
+          <div class=\"result-value\">${session.environment === 'piloto' ? '🧪 Piloto (Teste)' : '📊 Produção'}</div>
+        </div>
+
+        <div class=\"result-item\">
+          <div class=\"result-label\">🕐 Data/Hora de Login</div>
+          <div class=\"result-value\">${new Date(session.loginTime).toLocaleString('pt-BR')}</div>
+        </div>
+
+        <div class=\"result-item\">
+          <div class=\"result-label\">⏱️ Duração da Sessão</div>
+          <div class=\"result-value\">${session.loginDuration}</div>
+        </div>
+
+        <div class=\"result-item\">
+          <div class=\"result-label\">👨‍💼 Perfil</div>
+          <div class=\"result-value\">${session.role.charAt(0).toUpperCase() + session.role.slice(1)}</div>
+        </div>
+
+        <div class=\"result-item last\">
+          <div class=\"result-label\">🔑 Token (Base64)</div>
+          <div class=\"result-value\" style=\"font-size: 11px; word-break: break-all;\">${session.token}</div>
+        </div>
+      `;
+
+      content.innerHTML = html;
+      resultDiv.classList.add('show');
+
+      // Mostrar debug log também
+      const debugLog = document.getElementById('debugLog');
+      debugLog.style.display = 'block';
+    }
+
+    function limparResultado() {
+      document.getElementById('result').classList.remove('show');
+      document.getElementById('debugLog').style.display = 'none';
+      document.getElementById('message').classList.remove('show');
+      logs.length = 0;
+      document.getElementById('debugLog').innerHTML = '';
+    }
+
+    function copiarResultado() {
+      const resultDiv = document.getElementById('resultContent');
+      if (resultDiv.innerHTML) {
+        const text = resultDiv.innerText;
+        navigator.clipboard.writeText(text).then(() => {
+          alert('Resultado copiado para a área de transferência!');
+        });
+      }
+    }
+
+    // Limpar input de CPF
+    document.getElementById('cpf').addEventListener('input', function(e) {
+      e.target.value = e.target.value.replace(/\\D/g, '').slice(0, 11);
+    });
+
+    // Submissão do formulário
+    document.getElementById('loginForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const cpf = document.getElementById('cpf').value;
+      const senha = document.getElementById('password').value;
+      const ambiente = document.getElementById('environment').value;
+
+      const btn = this.querySelector('button[type=\"submit\"]');
+      btn.disabled = true;
+
+      logs.length = 0;
+      document.getElementById('debugLog').innerHTML = '';
+
+      await processarLogin(cpf, senha, ambiente);
+
+      btn.disabled = false;
+    });
+
+    // Log inicial
+    addLog('🟢 Sistema de teste AUDESP v1.9 iniciado', 'success');
+    addLog('💡 Preencha o formulário e clique em Entrar', 'info');
+  </script>
+</body>
+</html>
