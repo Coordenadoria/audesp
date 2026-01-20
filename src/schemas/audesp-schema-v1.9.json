@@ -1,0 +1,760 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://audesp.tce.sp.gov.br/schema/prestacao-contas-v1.9",
+  "title": "Schema Prestação de Contas AUDESP v1.9",
+  "description": "Schema JSON completo para Prestação de Contas de Convênios conforme padrões AUDESP/TCE-SP",
+  "type": "object",
+  "required": [
+    "descritor",
+    "codigoAjuste",
+    "documentosFiscais",
+    "pagamentos"
+  ],
+  "properties": {
+    "descritor": {
+      "type": "object",
+      "title": "1. Descritor",
+      "description": "Informações básicas da prestação",
+      "required": ["exercicio", "orgao", "tipoDocumento", "municipio"],
+      "properties": {
+        "exercicio": {
+          "type": "string",
+          "title": "Exercício",
+          "description": "Ano de exercício (YYYY)",
+          "pattern": "^\\d{4}$",
+          "example": "2024",
+          "minLength": 4,
+          "maxLength": 4
+        },
+        "orgao": {
+          "type": "string",
+          "title": "Órgão",
+          "description": "Código do órgão responsável",
+          "pattern": "^[0-9]{6}$",
+          "example": "350025"
+        },
+        "municipio": {
+          "type": "string",
+          "title": "Município",
+          "description": "Código IBGE do município",
+          "pattern": "^[0-9]{7}$",
+          "example": "3509502"
+        },
+        "tipoDocumento": {
+          "type": "string",
+          "title": "Tipo de Documento",
+          "description": "Tipo de documento a transmitir",
+          "enum": ["1", "2", "3", "4", "5"],
+          "enumNames": [
+            "Prestação de Contas",
+            "Complementação",
+            "Retificação",
+            "Cancelamento",
+            "Substituição"
+          ]
+        },
+        "periodo": {
+          "type": "string",
+          "title": "Período",
+          "description": "Período de vigência (MM/YYYY)",
+          "pattern": "^(0[1-9]|1[0-2])/\\d{4}$",
+          "example": "01/2024"
+        },
+        "dataElaboracao": {
+          "type": "string",
+          "format": "date",
+          "title": "Data de Elaboração",
+          "description": "Data em que o documento foi elaborado",
+          "example": "2024-01-15"
+        },
+        "responsavel": {
+          "type": "object",
+          "title": "Responsável",
+          "description": "Dados do responsável pela prestação",
+          "required": ["nome", "cpf", "cargo"],
+          "properties": {
+            "nome": {
+              "type": "string",
+              "title": "Nome Completo",
+              "minLength": 5,
+              "maxLength": 150
+            },
+            "cpf": {
+              "type": "string",
+              "title": "CPF",
+              "pattern": "^[0-9]{3}\\.[0-9]{3}\\.[0-9]{3}-[0-9]{2}$",
+              "example": "123.456.789-10"
+            },
+            "cargo": {
+              "type": "string",
+              "title": "Cargo",
+              "minLength": 3,
+              "maxLength": 100
+            },
+            "email": {
+              "type": "string",
+              "format": "email",
+              "title": "Email",
+              "example": "responsavel@prefeitura.sp.gov.br"
+            },
+            "telefone": {
+              "type": "string",
+              "title": "Telefone",
+              "pattern": "^\\([0-9]{2}\\) [0-9]{4,5}-[0-9]{4}$",
+              "example": "(11) 3333-4444"
+            }
+          }
+        }
+      }
+    },
+
+    "codigoAjuste": {
+      "type": "string",
+      "title": "2. Código de Ajuste",
+      "description": "Código de ajuste da prestação no sistema AUDESP",
+      "pattern": "^[A-Z0-9]{10}$",
+      "example": "2024000001",
+      "minLength": 10,
+      "maxLength": 10
+    },
+
+    "retificacao": {
+      "type": "boolean",
+      "title": "3. Retificação",
+      "description": "Indica se é uma retificação de prestação anterior",
+      "default": false
+    },
+
+    "relacaoEmpregados": {
+      "type": "array",
+      "title": "4. Relação de Empregados",
+      "description": "Lista de empregados no período",
+      "minItems": 0,
+      "items": {
+        "type": "object",
+        "title": "Empregado",
+        "required": ["nome", "cpf", "cargo"],
+        "properties": {
+          "nome": {
+            "type": "string",
+            "title": "Nome Completo",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "cpf": {
+            "type": "string",
+            "title": "CPF",
+            "pattern": "^[0-9]{3}\\.[0-9]{3}\\.[0-9]{3}-[0-9]{2}$"
+          },
+          "cargo": {
+            "type": "string",
+            "title": "Cargo",
+            "minLength": 2,
+            "maxLength": 100
+          },
+          "dataAdmissao": {
+            "type": "string",
+            "format": "date",
+            "title": "Data de Admissão"
+          },
+          "dataDemissao": {
+            "type": "string",
+            "format": "date",
+            "title": "Data de Demissão"
+          },
+          "salario": {
+            "type": "number",
+            "title": "Salário (R$)",
+            "minimum": 0,
+            "maximum": 999999.99
+          },
+          "encargos": {
+            "type": "number",
+            "title": "Encargos (R$)",
+            "minimum": 0,
+            "maximum": 999999.99
+          }
+        }
+      }
+    },
+
+    "relacaoBens": {
+      "type": "object",
+      "title": "5. Relação de Bens",
+      "description": "Bens móveis e imóveis adquiridos",
+      "properties": {
+        "bensMoveis": {
+          "type": "array",
+          "title": "Bens Móveis",
+          "items": {
+            "type": "object",
+            "required": ["descricao", "valor"],
+            "properties": {
+              "descricao": {
+                "type": "string",
+                "title": "Descrição",
+                "minLength": 5,
+                "maxLength": 500
+              },
+              "valor": {
+                "type": "number",
+                "title": "Valor (R$)",
+                "minimum": 0,
+                "maximum": 99999999.99
+              },
+              "dataAquisicao": {
+                "type": "string",
+                "format": "date",
+                "title": "Data de Aquisição"
+              },
+              "numeroNota": {
+                "type": "string",
+                "title": "Número da Nota Fiscal",
+                "maxLength": 50
+              }
+            }
+          }
+        },
+        "bensImoveis": {
+          "type": "array",
+          "title": "Bens Imóveis",
+          "items": {
+            "type": "object",
+            "required": ["descricao", "valor", "localizacao"],
+            "properties": {
+              "descricao": {
+                "type": "string",
+                "title": "Descrição",
+                "minLength": 5,
+                "maxLength": 500
+              },
+              "valor": {
+                "type": "number",
+                "title": "Valor (R$)",
+                "minimum": 0,
+                "maximum": 999999999.99
+              },
+              "localizacao": {
+                "type": "string",
+                "title": "Localização (Endereço)",
+                "minLength": 10,
+                "maxLength": 300
+              },
+              "dataAquisicao": {
+                "type": "string",
+                "format": "date",
+                "title": "Data de Aquisição"
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "contratos": {
+      "type": "array",
+      "title": "6. Contratos",
+      "description": "Contratos celebrados no período",
+      "items": {
+        "type": "object",
+        "required": ["numero", "contratada", "valor", "dataInicio", "dataFim", "objeto"],
+        "properties": {
+          "numero": {
+            "type": "string",
+            "title": "Número do Contrato",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "contratada": {
+            "type": "object",
+            "title": "Contratada",
+            "required": ["nome", "cnpj"],
+            "properties": {
+              "nome": {
+                "type": "string",
+                "title": "Razão Social",
+                "minLength": 5,
+                "maxLength": 150
+              },
+              "cnpj": {
+                "type": "string",
+                "title": "CNPJ",
+                "pattern": "^[0-9]{2}\\.[0-9]{3}\\.[0-9]{3}/[0-9]{4}-[0-9]{2}$"
+              },
+              "endereco": {
+                "type": "string",
+                "title": "Endereço",
+                "maxLength": 300
+              }
+            }
+          },
+          "objeto": {
+            "type": "string",
+            "title": "Objeto do Contrato",
+            "minLength": 10,
+            "maxLength": 500
+          },
+          "valor": {
+            "type": "number",
+            "title": "Valor Total (R$)",
+            "minimum": 0,
+            "maximum": 999999999.99
+          },
+          "dataInicio": {
+            "type": "string",
+            "format": "date",
+            "title": "Data de Início"
+          },
+          "dataFim": {
+            "type": "string",
+            "format": "date",
+            "title": "Data de Término"
+          },
+          "modalidade": {
+            "type": "string",
+            "title": "Modalidade",
+            "enum": ["1", "2", "3", "4", "5"],
+            "enumNames": [
+              "Licitação por Preço",
+              "Licitação por Melhor Técnica",
+              "Dispensa de Licitação",
+              "Inexigibilidade",
+              "Convite"
+            ]
+          }
+        }
+      }
+    },
+
+    "documentosFiscais": {
+      "type": "array",
+      "title": "7. Documentos Fiscais",
+      "description": "Notas Fiscais e recibos",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["tipo", "numero", "dataEmissao", "valor"],
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "title": "Tipo de Documento",
+            "enum": ["1", "2", "3", "4", "5"],
+            "enumNames": [
+              "Nota Fiscal Eletrônica",
+              "Nota Fiscal Avulsa",
+              "Recibo",
+              "Fatura",
+              "Cupom"
+            ]
+          },
+          "numero": {
+            "type": "string",
+            "title": "Número do Documento",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "serie": {
+            "type": "string",
+            "title": "Série",
+            "maxLength": 10
+          },
+          "dataEmissao": {
+            "type": "string",
+            "format": "date",
+            "title": "Data de Emissão"
+          },
+          "dataRecebimento": {
+            "type": "string",
+            "format": "date",
+            "title": "Data de Recebimento"
+          },
+          "fornecedor": {
+            "type": "object",
+            "title": "Fornecedor",
+            "required": ["nome", "cnpjCpf"],
+            "properties": {
+              "nome": {
+                "type": "string",
+                "title": "Nome/Razão Social",
+                "minLength": 3,
+                "maxLength": 150
+              },
+              "cnpjCpf": {
+                "type": "string",
+                "title": "CNPJ ou CPF",
+                "minLength": 11,
+                "maxLength": 18
+              }
+            }
+          },
+          "descricao": {
+            "type": "string",
+            "title": "Descrição",
+            "minLength": 5,
+            "maxLength": 500
+          },
+          "valorBruto": {
+            "type": "number",
+            "title": "Valor Bruto (R$)",
+            "minimum": 0,
+            "maximum": 99999999.99
+          },
+          "descontos": {
+            "type": "number",
+            "title": "Descontos (R$)",
+            "minimum": 0,
+            "maximum": 99999999.99,
+            "default": 0
+          },
+          "deducoes": {
+            "type": "number",
+            "title": "Deduções (R$)",
+            "minimum": 0,
+            "maximum": 99999999.99,
+            "default": 0
+          },
+          "valorLiquido": {
+            "type": "number",
+            "title": "Valor Líquido (R$)",
+            "minimum": 0,
+            "maximum": 99999999.99
+          },
+          "impostos": {
+            "type": "object",
+            "title": "Impostos",
+            "properties": {
+              "icms": {
+                "type": "number",
+                "title": "ICMS",
+                "minimum": 0,
+                "maximum": 999999.99
+              },
+              "ipi": {
+                "type": "number",
+                "title": "IPI",
+                "minimum": 0,
+                "maximum": 999999.99
+              },
+              "pis": {
+                "type": "number",
+                "title": "PIS",
+                "minimum": 0,
+                "maximum": 999999.99
+              },
+              "cofins": {
+                "type": "number",
+                "title": "COFINS",
+                "minimum": 0,
+                "maximum": 999999.99
+              },
+              "issqn": {
+                "type": "number",
+                "title": "ISSQN",
+                "minimum": 0,
+                "maximum": 999999.99
+              }
+            }
+          },
+          "categoria": {
+            "type": "string",
+            "title": "Categoria",
+            "enum": ["1", "2", "3", "4", "5"],
+            "enumNames": [
+              "Custeio",
+              "Capital",
+              "Pessoal",
+              "Manutenção",
+              "Outros"
+            ]
+          },
+          "contrato": {
+            "type": "string",
+            "title": "Número do Contrato Relacionado",
+            "maxLength": 50
+          }
+        }
+      }
+    },
+
+    "pagamentos": {
+      "type": "array",
+      "title": "8. Pagamentos",
+      "description": "Registros de pagamentos efetuados",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["numero", "dataPagamento", "valor", "descricao"],
+        "properties": {
+          "numero": {
+            "type": "string",
+            "title": "Número do Documento de Pagamento",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "dataPagamento": {
+            "type": "string",
+            "format": "date",
+            "title": "Data do Pagamento"
+          },
+          "valor": {
+            "type": "number",
+            "title": "Valor Pago (R$)",
+            "minimum": 0,
+            "maximum": 99999999.99
+          },
+          "descricao": {
+            "type": "string",
+            "title": "Descrição do Pagamento",
+            "minLength": 5,
+            "maxLength": 300
+          },
+          "beneficiario": {
+            "type": "object",
+            "title": "Beneficiário",
+            "properties": {
+              "nome": {
+                "type": "string",
+                "title": "Nome/Razão Social",
+                "minLength": 3,
+                "maxLength": 150
+              },
+              "cnpjCpf": {
+                "type": "string",
+                "title": "CNPJ ou CPF",
+                "minLength": 11,
+                "maxLength": 18
+              },
+              "banco": {
+                "type": "string",
+                "title": "Banco",
+                "pattern": "^[0-9]{3}$",
+                "maxLength": 3
+              },
+              "agencia": {
+                "type": "string",
+                "title": "Agência",
+                "maxLength": 10
+              },
+              "conta": {
+                "type": "string",
+                "title": "Conta Bancária",
+                "maxLength": 20
+              }
+            }
+          },
+          "origem": {
+            "type": "string",
+            "title": "Origem do Pagamento",
+            "enum": ["1", "2", "3"],
+            "enumNames": [
+              "Recurso Próprio",
+              "Recurso Conveniado",
+              "Recurso Terceiros"
+            ]
+          },
+          "documentoRelacionado": {
+            "type": "string",
+            "title": "Número do Documento Fiscal Relacionado",
+            "maxLength": 50
+          },
+          "formaPagamento": {
+            "type": "string",
+            "title": "Forma de Pagamento",
+            "enum": ["1", "2", "3", "4", "5"],
+            "enumNames": [
+              "Transferência Bancária",
+              "Cheque",
+              "Dinheiro",
+              "Cartão de Crédito",
+              "Boleto"
+            ]
+          },
+          "referencia": {
+            "type": "string",
+            "title": "Número de Referência (Comprovante)",
+            "maxLength": 50
+          }
+        }
+      }
+    },
+
+    "conciliacao": {
+      "type": "object",
+      "title": "9. Conciliação",
+      "description": "Conciliação de saldos e recursos",
+      "properties": {
+        "saldoInicial": {
+          "type": "number",
+          "title": "Saldo Inicial (R$)",
+          "minimum": -999999999.99,
+          "maximum": 999999999.99
+        },
+        "receitas": {
+          "type": "number",
+          "title": "Receitas (R$)",
+          "minimum": 0,
+          "maximum": 999999999.99
+        },
+        "despesas": {
+          "type": "number",
+          "title": "Despesas (R$)",
+          "minimum": 0,
+          "maximum": 999999999.99
+        },
+        "saldoFinal": {
+          "type": "number",
+          "title": "Saldo Final (R$)",
+          "minimum": -999999999.99,
+          "maximum": 999999999.99
+        },
+        "observacoes": {
+          "type": "string",
+          "title": "Observações",
+          "maxLength": 1000
+        }
+      }
+    },
+
+    "transparencia": {
+      "type": "object",
+      "title": "10. Transparência",
+      "description": "Informações de transparência pública",
+      "properties": {
+        "linkDivulgacao": {
+          "type": "string",
+          "format": "uri",
+          "title": "Link de Divulgação",
+          "example": "https://prefeitura.sp.gov.br/transparencia"
+        },
+        "responsavelTrasparencia": {
+          "type": "string",
+          "title": "Responsável pela Divulgação",
+          "minLength": 5,
+          "maxLength": 150
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "title": "Email para Contato"
+        },
+        "telefone": {
+          "type": "string",
+          "title": "Telefone",
+          "pattern": "^\\([0-9]{2}\\) [0-9]{4,5}-[0-9]{4}$"
+        }
+      }
+    },
+
+    "resumoFinanceiro": {
+      "type": "object",
+      "title": "11. Resumo Financeiro",
+      "description": "Resumo consolidado de valores",
+      "readOnly": true,
+      "properties": {
+        "totalDocumentosFiscais": {
+          "type": "number",
+          "title": "Total Documentos Fiscais (R$)"
+        },
+        "totalPagamentos": {
+          "type": "number",
+          "title": "Total Pagamentos (R$)"
+        },
+        "totalDespesas": {
+          "type": "number",
+          "title": "Total Despesas (R$)"
+        },
+        "divergencias": {
+          "type": "number",
+          "title": "Divergências (R$)"
+        }
+      }
+    },
+
+    "anexos": {
+      "type": "array",
+      "title": "12. Anexos",
+      "description": "Arquivos anexados à prestação",
+      "items": {
+        "type": "object",
+        "required": ["nome", "tipo", "url"],
+        "properties": {
+          "nome": {
+            "type": "string",
+            "title": "Nome do Arquivo",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "tipo": {
+            "type": "string",
+            "title": "Tipo",
+            "enum": ["pdf", "xlsx", "docx", "jpg", "png"],
+            "enumNames": ["PDF", "Excel", "Word", "JPEG", "PNG"]
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "title": "URL do Arquivo"
+          },
+          "tamanho": {
+            "type": "number",
+            "title": "Tamanho (bytes)",
+            "minimum": 0
+          },
+          "dataUpload": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Data de Upload"
+          }
+        }
+      }
+    },
+
+    "metadados": {
+      "type": "object",
+      "title": "Metadados",
+      "description": "Informações sobre o documento",
+      "readOnly": true,
+      "properties": {
+        "versaoSchema": {
+          "type": "string",
+          "title": "Versão do Schema",
+          "default": "1.9"
+        },
+        "dataCriacao": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Data de Criação"
+        },
+        "dataUltimaAtualizacao": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Data da Última Atualização"
+        },
+        "usuarioCriacao": {
+          "type": "string",
+          "title": "Usuário que Criou"
+        },
+        "usuarioAtualizacao": {
+          "type": "string",
+          "title": "Usuário que Atualizou"
+        },
+        "status": {
+          "type": "string",
+          "title": "Status do Documento",
+          "enum": ["rascunho", "validado", "transmitido", "rejeitado", "aceito"],
+          "default": "rascunho"
+        },
+        "hash": {
+          "type": "string",
+          "title": "Hash do Documento (SHA256)",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    }
+  },
+
+  "additionalProperties": false,
+  "errorMessage": {
+    "required": "Campo obrigatório: ${missingProperty}"
+  }
+}
