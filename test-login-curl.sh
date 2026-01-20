@@ -13,12 +13,12 @@ echo "╚═══════════════════════�
 echo ""
 
 # ============================================
-# CONFIGURAÇÃO - EDITE COM SUAS CREDENCIAIS
+# CONFIGURAÇÃO - EDITE COM SUAS CREDENCIAIS REAIS
 # ============================================
 
-EMAIL="usuario@tce.sp.gov.br"  # Trocar com seu email real (ex: seu-email@orgao.sp.gov.br)
-SENHA="demo123"                # Trocar com sua senha
-AMBIENTE="piloto"                  # piloto ou producao
+EMAIL="seu-email@seu-orgao.sp.gov.br"  # Seu email cadastrado no TCE-SP
+SENHA="sua-senha-aqui"                 # Sua senha do TCE-SP
+AMBIENTE="piloto"                      # piloto ou producao
 
 # Determinar URL baseado no ambiente
 if [ "$AMBIENTE" = "producao" ]; then

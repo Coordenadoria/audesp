@@ -1,34 +1,24 @@
 import React, { useState } from 'react';
 import { LogIn, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import LoginService from '../services/LoginService';
 
 interface LoginCredentials {
-  cpf: string;
+  email: string;
   password: string;
   environment: 'piloto' | 'producao';
 }
 
 interface AuthContextType {
   isLoggedIn: boolean;
-  user: { cpf: string; email: string; name: string; environment: string } | null;
+  user: { email: string; name: string; environment: string } | null;
   login: (credentials: LoginCredentials) => Promise<boolean>;
   logout: () => void;
 }
 
-// Mapeamento CPF -> Email (para API real)
-const cpfToEmailMap = {
-  '00000000000': 'usuario@tce.sp.gov.br',
-  '12345678901': 'teste@tce.sp.gov.br',
-};
-
-const mockUsers = {
-  '00000000000': { password: 'demo123', name: 'Usuário Demo', email: 'usuario@tce.sp.gov.br' },
-  '12345678901': { password: 'teste123', name: 'Testador AUDESP', email: 'teste@tce.sp.gov.br' },
-};
-
 export const AuthContext = React.createContext<AuthContextType | null>(null);
 
 const LoginComponent: React.FC<{ onSuccess: (user: any) => void }> = ({ onSuccess }) => {
-  const [cpf, setCpf] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [environment, setEnvironment] = useState<'piloto' | 'producao'>('piloto');
@@ -42,46 +32,47 @@ const LoginComponent: React.FC<{ onSuccess: (user: any) => void }> = ({ onSucces
 
     try {
       // Validar campos vazios
-      if (!cpf.trim() || !password.trim()) {
-        setError('CPF e senha são obrigatórios');
+      if (!email.trim() || !password.trim()) {
+        setError('Email e senha são obrigatórios');
         setLoading(false);
         return;
       }
 
-      // Validar comprimento do CPF
-      if (cpf.length !== 11) {
-        setError('CPF deve ter exatamente 11 dígitos');
+      // Validar formato de email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        setError('Formato de email inválido');
         setLoading(false);
         return;
       }
 
-      // Simular validação
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      const user = mockUsers[cpf as keyof typeof mockUsers];
+      // Conectar com API AUDESP real
+      const response = await LoginService.login(email, password);
       
-      if (!user) {
-        setError('CPF não encontrado. Use um CPF válido da lista de teste.');
+      if (!response.success) {
+        setError(response.message || 'Erro ao fazer login');
         setLoading(false);
         return;
       }
 
-      if (user.password !== password) {
-        setError('Senha incorreta para este CPF');
-        setLoading(false);
-        return;
-      }
-
-      onSuccess({
-        cpf,
-        email: user.email,
-        name: user.name,
+      // Sucesso - guardar dados do usuário
+      const userData = {
+        email,
+        name: response.usuario?.nome || email.split('@')[0],
         environment,
+        token: response.token,
         loginTime: new Date().toISOString(),
         role: 'operator'
-      });
+      };
+
+      // Guardar no localStorage
+      localStorage.setItem('audesp_token', response.token || '');
+      localStorage.setItem('audesp_email', email);
+      localStorage.setItem('audesp_user', JSON.stringify(userData));
+
+      onSuccess(userData);
     } catch (err) {
-      setError('Erro ao fazer login. Tente novamente.');
+      setError('Erro ao fazer login. Verifique sua conexão.');
       setLoading(false);
     }
   };
@@ -106,18 +97,18 @@ const LoginComponent: React.FC<{ onSuccess: (user: any) => void }> = ({ onSucces
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">CPF</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Email (seu-email@orgao.sp.gov.br)</label>
             <input
-              type="text"
-              value={cpf}
-              onChange={(e) => setCpf(e.target.value.replace(/\D/g, '').slice(0, 11))}
-              placeholder="00000000000"
-              maxLength={11}
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="usuario@seu-orgao.sp.gov.br"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
               required
+              autoComplete="email"
             />
             <p className="text-xs text-gray-500 mt-1">
-              {cpf.length}/11 dígitos | Ex: 00000000000
+              Email cadastrado no TCE-SP
             </p>
           </div>
 
@@ -131,6 +122,7 @@ const LoginComponent: React.FC<{ onSuccess: (user: any) => void }> = ({ onSucces
                 placeholder="••••••••"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
                 required
+                autoComplete="current-password"
               />
               <button
                 type="button"
@@ -140,7 +132,6 @@ const LoginComponent: React.FC<{ onSuccess: (user: any) => void }> = ({ onSucces
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
-            <p className="text-xs text-gray-500 mt-1">Demo: demo123</p>
           </div>
 
           <div>
@@ -175,19 +166,14 @@ const LoginComponent: React.FC<{ onSuccess: (user: any) => void }> = ({ onSucces
         </form>
 
         <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-xs text-gray-700 font-semibold mb-3">✅ Credenciais de Teste Válidas:</p>
-          <div className="space-y-2">
-            <div className="bg-white p-2 rounded border border-blue-100 cursor-pointer hover:bg-blue-50" onClick={() => { setCpf('00000000000'); setPassword('demo123'); }}>
-              <p className="text-xs font-mono font-bold text-gray-900">CPF: 00000000000</p>
-              <p className="text-xs font-mono text-gray-600">Senha: demo123</p>
-              <p className="text-xs text-blue-600">👉 Clique para preencher</p>
-            </div>
-            <div className="bg-white p-2 rounded border border-blue-100 cursor-pointer hover:bg-blue-50" onClick={() => { setCpf('12345678901'); setPassword('teste123'); }}>
-              <p className="text-xs font-mono font-bold text-gray-900">CPF: 12345678901</p>
-              <p className="text-xs font-mono text-gray-600">Senha: teste123</p>
-              <p className="text-xs text-blue-600">👉 Clique para preencher</p>
-            </div>
-          </div>
+          <p className="text-xs text-gray-700 font-semibold mb-2">ℹ️ Informações:</p>
+          <p className="text-xs text-gray-600">
+            Use as credenciais fornecidas pelo TCE-SP para seu órgão.
+          </p>
+          <p className="text-xs text-gray-600 mt-2">
+            📞 Dúvidas: (11) 3886-6000<br/>
+            📧 Email: suporte-audesp@tce.sp.gov.br
+          </p>
         </div>
       </div>
     </div>
