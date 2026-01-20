@@ -1,0 +1,249 @@
+{
+  "exercicio": 2024,
+  "dataPrestacao": "2024-01-15",
+  "periodo": {
+    "dataInicio": "2024-01-01",
+    "dataFim": "2024-12-31"
+  },
+  "entidade": {
+    "nome": "Entidade de Teste AUDESP",
+    "cnpj": "12345678000195",
+    "natureza": "privada",
+    "esfera": "municipal",
+    "inscricaoEstadual": "123456789.000.123",
+    "atividade": "Assistência Social"
+  },
+  "responsavel": {
+    "nome": "João Silva Santos",
+    "cpf": "12345678901",
+    "rg": "123456789",
+    "email": "joao.silva@entidade.com",
+    "telefone": "(11) 98765-4321",
+    "cargo": "Presidente",
+    "funcao": "Representante Legal",
+    "dataApresentacao": "2024-01-15"
+  },
+  "endereco": {
+    "logradouro": "Avenida Principal",
+    "numero": "1000",
+    "complemento": "Apto 101",
+    "bairro": "Centro",
+    "cep": "01234567",
+    "municipio": "São Paulo",
+    "uf": "SP",
+    "pais": "Brasil"
+  },
+  "financeiro": {
+    "receitaTotal": 500000.00,
+    "despesaTotal": 450000.00,
+    "resultadoExercicio": 50000.00,
+    "saldo": 100000.00,
+    "receitas": {
+      "donacoes": 200000.00,
+      "servicos": 150000.00,
+      "vendas": 100000.00,
+      "juros": 25000.00,
+      "outras": 25000.00
+    },
+    "despesas": {
+      "pessoal": 200000.00,
+      "encargos": 50000.00,
+      "servicos": 100000.00,
+      "materiais": 75000.00,
+      "investimentos": 15000.00,
+      "outras": 10000.00
+    }
+  },
+  "patrimonio": {
+    "bensImoveis": 500000.00,
+    "bensMoveis": 50000.00,
+    "totalBens": 550000.00,
+    "ativos": [
+      {
+        "descricao": "Sala de aula equipada",
+        "valor": 150000.00,
+        "dataAquisicao": "2020-06-15",
+        "estado": "bom",
+        "localizacao": "Prédio A, Andar 2"
+      },
+      {
+        "descricao": "Computadores e impressoras",
+        "valor": 30000.00,
+        "dataAquisicao": "2022-03-01",
+        "estado": "bom",
+        "localizacao": "Sala de Informática"
+      },
+      {
+        "descricao": "Veículo de transporte",
+        "valor": 80000.00,
+        "dataAquisicao": "2019-11-10",
+        "estado": "regular",
+        "localizacao": "Garagem"
+      }
+    ]
+  },
+  "passivos": [
+    {
+      "descricao": "Financiamento de imóvel",
+      "valor": 200000.00,
+      "vencimento": "2026-12-31",
+      "credor": "Banco XYZ"
+    },
+    {
+      "descricao": "Fornecedores a pagar",
+      "valor": 15000.00,
+      "vencimento": "2024-02-28",
+      "credor": "Diversos"
+    }
+  ],
+  "contasBancarias": [
+    {
+      "banco": "Banco do Brasil",
+      "codigoBanco": "001",
+      "agencia": "0001",
+      "conta": "123456789",
+      "tipoConta": "corrente",
+      "saldo": 50000.00,
+      "dataSaldo": "2024-01-15",
+      "titular": "Entidade de Teste"
+    },
+    {
+      "banco": "Caixa Econômica Federal",
+      "codigoBanco": "104",
+      "agencia": "0002",
+      "conta": "987654321",
+      "tipoConta": "poupanca",
+      "saldo": 100000.00,
+      "dataSaldo": "2024-01-15",
+      "titular": "Fundo de Reserva"
+    }
+  ],
+  "projetos": [
+    {
+      "id": "PROJ-2024-001",
+      "nome": "Programa de Capacitação",
+      "descricao": "Capacitação profissional para 50 pessoas",
+      "dataInicio": "2024-01-01",
+      "dataFim": "2024-06-30",
+      "orcamento": 100000.00,
+      "gasto": 85000.00,
+      "beneficiarios": 50,
+      "localidade": "São Paulo, SP",
+      "status": "em_execucao"
+    },
+    {
+      "id": "PROJ-2024-002",
+      "nome": "Reforma da Estrutura Física",
+      "descricao": "Reforma completa do prédio da entidade",
+      "dataInicio": "2023-06-01",
+      "dataFim": "2024-03-31",
+      "orcamento": 150000.00,
+      "gasto": 145000.00,
+      "beneficiarios": 1,
+      "localidade": "São Paulo, SP",
+      "status": "em_execucao"
+    }
+  ],
+  "atividades": [
+    {
+      "data": "2024-01-10",
+      "descricao": "Workshop sobre sustentabilidade",
+      "resultado": "30 participantes, feedback positivo",
+      "participantes": 30,
+      "documento": "REL-2024-001.pdf"
+    },
+    {
+      "data": "2024-01-12",
+      "descricao": "Reunião de planejamento estratégico",
+      "resultado": "Plano 2024 aprovado pela diretoria",
+      "participantes": 8,
+      "documento": "ATA-2024-001.pdf"
+    }
+  ],
+  "recursosHumanos": [
+    {
+      "nome": "Maria Silva",
+      "cpf": "98765432101",
+      "cargo": "Diretora Executiva",
+      "salario": 5000.00,
+      "dataAdmissao": "2018-01-15",
+      "tipo": "funcionario"
+    },
+    {
+      "nome": "Pedro Santos",
+      "cpf": "87654321098",
+      "cargo": "Gerente Administrativo",
+      "salario": 3500.00,
+      "dataAdmissao": "2019-06-01",
+      "tipo": "funcionario"
+    },
+    {
+      "nome": "Ana Costa",
+      "cargo": "Voluntária",
+      "salario": 0,
+      "dataAdmissao": "2023-01-01",
+      "tipo": "voluntario"
+    }
+  ],
+  "conformidade": {
+    "auditoriaInterna": true,
+    "auditoriiaExterna": true,
+    "relatorioDiretoria": true,
+    "ataReuniao": true,
+    "estatutoAtualizado": true,
+    "políticasDocumentadas": true,
+    "processosDocumentados": true,
+    "dataÚltimaAtualizacao": "2024-01-15"
+  },
+  "parcerias": [
+    {
+      "id": "PARC-2024-001",
+      "instituicao": "Universidade X",
+      "descricao": "Parceria para pesquisa e desenvolvimento",
+      "dataInicio": "2023-01-01",
+      "dataFim": "2025-12-31",
+      "valor": 50000.00,
+      "escopo": "Pesquisa em inclusão social",
+      "status": "vigente"
+    },
+    {
+      "id": "PARC-2024-002",
+      "instituicao": "Prefeitura Municipal",
+      "descricao": "Convênio para programa social",
+      "dataInicio": "2024-01-01",
+      "valor": 75000.00,
+      "escopo": "Atendimento a famílias carentes",
+      "status": "vigente"
+    }
+  ],
+  "doacoes": [
+    {
+      "data": "2024-01-05",
+      "doador": "Empresa ABC Ltda",
+      "descricao": "Doação de computadores",
+      "valor": 20000.00,
+      "tipo": "bens",
+      "comprovante": "NF-2024-001.pdf"
+    },
+    {
+      "data": "2024-01-10",
+      "doador": "Sr. João Silva",
+      "descricao": "Doação monetária",
+      "valor": 5000.00,
+      "tipo": "monetaria",
+      "comprovante": "REC-2024-001.pdf"
+    },
+    {
+      "data": "2024-01-12",
+      "doador": "ONG Parceira",
+      "descricao": "Doação de materiais educativos",
+      "valor": 3000.00,
+      "tipo": "bens",
+      "comprovante": "NF-2024-002.pdf"
+    }
+  ],
+  "dataUltimaAtualizacao": "2024-01-15T14:30:00Z",
+  "usuarioResponsavel": "admin",
+  "statusTransmissao": "pendente",
+  "observacoes": "Prestação de contas referente ao exercício de 2024. Todos os dados foram validados e sincronizados com o template AUDESP v1.9."
+}
