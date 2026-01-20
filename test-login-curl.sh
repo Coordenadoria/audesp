@@ -16,8 +16,8 @@ echo ""
 # CONFIGURAÇÃO - EDITE COM SUAS CREDENCIAIS
 # ============================================
 
-EMAIL="seu-email@orgao.sp.gov.br"  # Trocar com seu email
-SENHA="sua-senha-aqui"             # Trocar com sua senha
+EMAIL="usuario@tce.sp.gov.br"  # Trocar com seu email real (ex: seu-email@orgao.sp.gov.br)
+SENHA="demo123"                # Trocar com sua senha
 AMBIENTE="piloto"                  # piloto ou producao
 
 # Determinar URL baseado no ambiente
