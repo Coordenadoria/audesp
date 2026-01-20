@@ -68,10 +68,8 @@ const AudespecForm: React.FC<AudespecFormProps> = ({ onEnvioCompleto }) => {
   const [autenticado, setAutenticado] = useState(false);
   const [jsonView, setJsonView] = useState(false);
   const [loginModalAberto, setLoginModalAberto] = useState(false);
-  const [carregando, setCarregando] = useState(false);
   const [perfil, setPerfil] = useState('');
   const [emailUsuario, setEmailUsuario] = useState('');
-  const [token, setToken] = useState('');
 
   const cliente = new AudespecClient();
 
@@ -96,7 +94,6 @@ const AudespecForm: React.FC<AudespecFormProps> = ({ onEnvioCompleto }) => {
 
   const handleLoginSucesso = (email: string, novoToken: string, novoPerfil: string) => {
     setEmailUsuario(email);
-    setToken(novoToken);
     setPerfil(novoPerfil);
     setAutenticado(true);
     setLoginModalAberto(false);
@@ -107,7 +104,6 @@ const AudespecForm: React.FC<AudespecFormProps> = ({ onEnvioCompleto }) => {
     localStorage.removeItem('audesp_email');
     localStorage.removeItem('audesp_perfil');
     localStorage.removeItem('audesp_nome');
-    setToken('');
     setEmailUsuario('');
     setPerfil('');
     setAutenticado(false);
