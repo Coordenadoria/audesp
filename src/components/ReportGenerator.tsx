@@ -1,5 +1,5 @@
 import React from 'react';
-import { Download, FileText, BarChart3 } from 'lucide-react';
+import { Download, BarChart3 } from 'lucide-react';
 
 interface ReportData {
   descritor?: any;

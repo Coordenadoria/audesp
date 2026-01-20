@@ -1,7 +1,7 @@
-import React, { useState, useCallback, useMemo } from 'react';
-import { ChevronDown, ChevronRight, AlertCircle, CheckCircle, Info, Plus, Trash2, Copy, Eye, EyeOff } from 'lucide-react';
-import { SECTION_STRUCTURE, AUDESP_SCHEMA } from '../schemas/audespSchema';
-import { validateField, formatValue, parseMask } from '../services/validationService';
+import React, { useState, useCallback } from 'react';
+import { ChevronDown, ChevronRight, AlertCircle, Plus, Trash2, EyeOff, Copy } from 'lucide-react';
+import { SECTION_STRUCTURE } from '../schemas/audespSchema';
+import { validateField } from '../services/validationService';
 
 interface FormData {
   [key: string]: any;

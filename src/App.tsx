@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Download, Upload, Send, AlertCircle, CheckCircle, Eye, EyeOff, Menu, X, FileUp } from 'lucide-react';
+import { Download, Upload, Send, AlertCircle, CheckCircle, Menu, X } from 'lucide-react';
 import FormBuilder from './components/FormBuilder';
 import ReportGenerator from './components/ReportGenerator';
 import PDFOCRExtractor from './components/PDFOCRExtractor';
