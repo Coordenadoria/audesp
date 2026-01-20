@@ -37,11 +37,5 @@
         }
       ]
     }
-  ],
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "https://api.audesp.gov.br/api/$1"
-    }
   ]
 }
