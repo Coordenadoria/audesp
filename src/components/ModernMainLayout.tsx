@@ -6,9 +6,9 @@
 
 import React, { useState, useMemo } from 'react';
 import { PrestacaoContas } from '../types';
-import { FormSections } from './FormSections';
 import PDFViewerModern from './PDFViewerModern';
 import JSONViewerModern from './JSONViewerModern';
+import PrestacaoContasForm from './PrestacaoContasForm';
 
 export interface ModernMainLayoutProps {
   activeSection: string;
@@ -269,18 +269,9 @@ const ModernMainLayout: React.FC<ModernMainLayoutProps> = ({
           {/* CONTENT AREA */}
           <div className="flex-1 overflow-hidden">
             {activePanel === 'form' && (
-              <div className="h-full overflow-y-auto bg-slate-50 p-6">
-                <div className="max-w-4xl">
-                  <FormSections
-                    activeSection={activeSection}
-                    formData={formData}
-                    updateField={updateField}
-                    updateItem={updateItem}
-                    addItem={addItem}
-                    removeItem={removeItem}
-                    handleExtraction={handleExtraction}
-                    handleDownload={handleDownload}
-                  />
+              <div className="h-full overflow-y-auto bg-slate-50">
+                <div className="max-w-full">
+                  <PrestacaoContasForm />
                 </div>
               </div>
             )}
