@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { PrestacaoContas } from '../types';
 import { SectionStatus } from '../services/validationService';
 import { CLS } from './ui/BlockBase';
+import PrestacaoContasForm from './PrestacaoContasForm';
 
 interface DashboardProps {
     data: PrestacaoContas;
@@ -129,7 +130,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, sectionStatus, onNav
                         );
                     })}
                 </div>
-            </div>
-        </div>
-    );
+
+export const DashboardNew: React.FC = () => {
+    return <PrestacaoContasForm />;
 };
+
+export default Dashboard;
