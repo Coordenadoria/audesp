@@ -1,37 +1,32 @@
 /**
- * Serviço de Login com suporte real e desenvolvimento
- * Em desenvolvimento: usa credenciais mock
- * Em produção: conecta com API AUDESP real
+ * Serviço de Login - Autenticação Real com API AUDESP
+ * Integração com sistema oficial de autenticação
  */
 
 export interface LoginResponse {
   success: boolean;
   token?: string;
+  expire_in?: number;
+  token_type?: string;
   message: string;
   usuario?: {
     email: string;
     nome: string;
     perfil: string;
+    cpf?: string;
   };
+  campos_invalidos?: Array<{
+    campo: string;
+    mensagem: string;
+  }>;
 }
 
 class LoginService {
-  private isDevelopment = !process.env.NODE_ENV || process.env.NODE_ENV === 'development';
-
-  // Credenciais mock para desenvolvimento
-  private mockUsers = {
-    'operador@audesp.sp.gov.br': { senha: 'audesp123', perfil: 'Operador' },
-    'gestor@audesp.sp.gov.br': { senha: 'audesp123', perfil: 'Gestor' },
-    'contador@audesp.sp.gov.br': { senha: 'audesp123', perfil: 'Contador' },
-    'auditor@audesp.sp.gov.br': { senha: 'audesp123', perfil: 'Auditor Interno' },
-    'admin@audesp.sp.gov.br': { senha: 'audesp123', perfil: 'Administrador' },
-    // Demo accounts
-    'teste@test.com': { senha: 'teste123', perfil: 'Operador' },
-    'demo@demo.com': { senha: 'demo123', perfil: 'Gestor' }
-  };
+  private apiUrl = process.env.REACT_APP_AUDESP_URL || 'https://sistemas.tce.sp.gov.br/audesp/api';
+  private apiKey = process.env.REACT_APP_AUDESP_API_KEY || '';
 
   /**
-   * Fazer login (real ou mock)
+   * Fazer login com credenciais reais na API AUDESP
    */
   async login(email: string, senha: string): Promise<LoginResponse> {
     try {
@@ -50,113 +45,78 @@ class LoginService {
         };
       }
 
-      // Modo desenvolvimento
-      if (this.isDevelopment) {
-        return this.loginMock(email, senha);
-      }
-
-      // Modo produção: conectar com API real
+      // Conectar com API AUDESP real
       return this.loginReal(email, senha);
     } catch (error) {
-      console.error('Erro no login:', error);
+      console.error('Erro crítico no login:', error);
       return {
         success: false,
-        message: `Erro ao fazer login: ${error}`
+        message: `Erro ao fazer login: ${error instanceof Error ? error.message : String(error)}`
       };
     }
   }
 
   /**
-   * Login em modo desenvolvimento (mock)
-   */
-  private loginMock(email: string, senha: string): LoginResponse {
-    const user = this.mockUsers[email as keyof typeof this.mockUsers];
-
-    if (!user) {
-      return {
-        success: false,
-        message: `❌ Usuário não encontrado: ${email}\n\n📝 Usuários de teste disponíveis:\n${this.listarUsuariosDemo()}`
-      };
-    }
-
-    if (user.senha !== senha) {
-      return {
-        success: false,
-        message: `❌ Senha incorreta para ${email}`
-      };
-    }
-
-    // Gerar token mock
-    const token = this.gerarTokenMock(email);
-
-    return {
-      success: true,
-      token,
-      message: `✅ Login bem-sucedido (modo desenvolvimento)`,
-      usuario: {
-        email,
-        nome: this.extrairNomeEmail(email),
-        perfil: user.perfil
-      }
-    };
-  }
-
-  /**
-   * Login em modo produção (API real)
+   * Autenticação via API AUDESP Real
    */
   private async loginReal(email: string, senha: string): Promise<LoginResponse> {
     try {
-      const url = `${process.env.REACT_APP_AUDESP_URL || 'https://sistemas.tce.sp.gov.br/audesp/api'}/login`;
+      const url = `${this.apiUrl}/login`;
+
+      // Header com autenticação em base64 (email:senha)
+      const credentials = Buffer.from(`${email}:${senha}`).toString('base64');
 
       const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-authorization': `${email}:${senha}`
+          'Authorization': `Basic ${credentials}`,
+          'x-authorization': `${email}:${senha}`,
+          ...(this.apiKey && { 'x-api-key': this.apiKey })
         },
-        body: JSON.stringify({ email, senha })
+        body: JSON.stringify({
+          email,
+          senha
+        })
       });
 
+      // Tentar parsear resposta
+      let data: any;
+      try {
+        data = await response.json();
+      } catch (e) {
+        data = { message: `HTTP ${response.status}` };
+      }
+
+      // Erro na resposta
       if (!response.ok) {
-        const error = await response.json().catch(() => ({ message: 'Erro ao conectar com AUDESP' }));
         return {
           success: false,
-          message: `❌ Erro AUDESP: ${error.message || 'Credenciais inválidas'}`
+          message: data.message || data.mensagem || `Erro: ${response.statusText}`,
+          campos_invalidos: data.campos_invalidos || data.campos_inválidos
         };
       }
 
-      const data = await response.json();
-
+      // Sucesso
       return {
         success: true,
-        token: data.token,
-        message: '✅ Login bem-sucedido',
+        token: data.token || data.access_token,
+        expire_in: data.expire_in || data.expires_in,
+        token_type: data.token_type || 'bearer',
+        message: '✅ Autenticado com sucesso',
         usuario: {
           email,
-          nome: this.extrairNomeEmail(email),
-          perfil: 'Usuario'
+          nome: data.nome || data.usuario || this.extrairNomeEmail(email),
+          perfil: data.perfil || data.role || 'Usuário',
+          cpf: data.cpf
         }
       };
     } catch (error) {
       return {
         success: false,
-        message: `❌ Erro ao conectar com AUDESP: ${error}`
+        message: `Erro de conexão com AUDESP: ${error instanceof Error ? error.message : 'Erro desconhecido'}`
       };
     }
-  }
-
-  /**
-   * Gerar token mock para desenvolvimento
-   */
-  private gerarTokenMock(email: string): string {
-    const payload = {
-      email,
-      iat: Math.floor(Date.now() / 1000),
-      exp: Math.floor(Date.now() / 1000) + 86400 // 24 horas
-    };
-    
-    // Simulação de JWT (não é real, apenas para desenvolvimento)
-    return `mock_${Buffer.from(JSON.stringify(payload)).toString('base64')}_${Date.now()}`;
   }
 
   /**
@@ -168,7 +128,7 @@ class LoginService {
   }
 
   /**
-   * Extrair nome do email
+   * Extrair nome do email como fallback
    */
   private extrairNomeEmail(email: string): string {
     const parte = email.split('@')[0];
@@ -179,19 +139,25 @@ class LoginService {
   }
 
   /**
-   * Listar usuários de teste disponíveis
+   * Verificar se token é válido
    */
-  private listarUsuariosDemo(): string {
-    return Object.keys(this.mockUsers)
-      .map(email => `  • ${email} / ${this.mockUsers[email as keyof typeof this.mockUsers].senha}`)
-      .join('\n');
+  verificarTokenValido(token?: string): boolean {
+    if (!token) {
+      token = localStorage.getItem('audesp_token') || '';
+    }
+    return token.length > 0;
   }
 
   /**
-   * Verificar se está em modo desenvolvimento
+   * Fazer logout (limpar sessão)
    */
-  estaEmDesenvolvimento(): boolean {
-    return this.isDevelopment;
+  logout(): void {
+    localStorage.removeItem('audesp_token');
+    localStorage.removeItem('audesp_email');
+    localStorage.removeItem('audesp_perfil');
+    localStorage.removeItem('audesp_nome');
+    localStorage.removeItem('audesp_cpf');
+    localStorage.removeItem('audesp_expire_in');
   }
 }
 

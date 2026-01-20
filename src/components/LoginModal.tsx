@@ -9,8 +9,8 @@ interface LoginModalProps {
 }
 
 const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess }) => {
-  const [email, setEmail] = useState('operador@audesp.sp.gov.br');
-  const [senha, setSenha] = useState('audesp123');
+  const [email, setEmail] = useState('');
+  const [senha, setSenha] = useState('');
   const [carregando, setCarregando] = useState(false);
   const [resposta, setResposta] = useState<LoginResponse | null>(null);
   const [mostrarSenha, setMostrarSenha] = useState(false);
@@ -33,13 +33,13 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess
       // Callback de sucesso
       onLoginSuccess(resultado.usuario.email, resultado.token, resultado.usuario.perfil);
 
-      // Fechar modal após 1 segundo
+      // Fechar modal após 2 segundos
       setTimeout(() => {
         onClose();
         setEmail('');
         setSenha('');
         setResposta(null);
-      }, 1000);
+      }, 2000);
     }
 
     setCarregando(false);
@@ -106,15 +106,14 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess
             </div>
           )}
 
-          {/* Aviso Modo Desenvolvimento */}
-          {LoginService.estaEmDesenvolvimento() && (
-            <div className="p-4 rounded-lg bg-yellow-50 border border-yellow-200">
-              <p className="text-sm font-semibold text-yellow-800 mb-2">
-                🔧 Modo Desenvolvimento Ativo
+          {/* Aviso API Real */}
+          {(
+            <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
+              <p className="text-sm font-semibold text-blue-800 mb-2">
+                🔒 Autenticação com API AUDESP
               </p>
-              <p className="text-xs text-yellow-700">
-                Em produção, conectará à API real do AUDESP. Os dados de teste abaixo são apenas para
-                desenvolvimento.
+              <p className="text-xs text-blue-700">
+                Use suas credenciais reais fornecidas pelo TCE-SP para acessar o sistema.
               </p>
             </div>
           )}
@@ -180,17 +179,15 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess
           </form>
 
           {/* Dica de Usuários Demo */}
-          {LoginService.estaEmDesenvolvimento() && !resposta?.success && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-xs">
-              <p className="font-semibold text-blue-900 mb-2">💡 Usuários de Teste Disponíveis:</p>
-              <div className="space-y-1 text-blue-800">
-                <p>• operador@audesp.sp.gov.br / audesp123</p>
-                <p>• gestor@audesp.sp.gov.br / audesp123</p>
-                <p>• contador@audesp.sp.gov.br / audesp123</p>
-                <p>• auditor@audesp.sp.gov.br / audesp123</p>
-                <p>• admin@audesp.sp.gov.br / audesp123</p>
-                <p>• teste@test.com / teste123</p>
-              </div>
+          {!resposta?.success && (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-xs">
+              <p className="font-semibold text-gray-900 mb-2">📝 Instruções:</p>
+              <p className="text-gray-700 mb-2">
+                Use as credenciais fornecidas pelo TCE-SP para acessar o sistema.
+              </p>
+              <p className="text-gray-600">
+                Contato TCE-SP: <strong>(11) 3293-3000</strong>
+              </p>
             </div>
           )}
         </div>
