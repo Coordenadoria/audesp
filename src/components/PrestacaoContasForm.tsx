@@ -191,7 +191,7 @@ export const PrestacaoContasForm: React.FC = () => {
   const [expandedSections, setExpandedSections] = useState<Record<number, boolean>>({
     1: true, // Descritor aberto por padrão
   });
-  const [sectionStatus, setSectionStatus] = useState<Record<number, SectionStatus>>({});
+  const [sectionStatus] = useState<Record<number, SectionStatus>>({});
 
   const toggleSection = useCallback((sectionId: number) => {
     setExpandedSections(prev => ({
@@ -204,13 +204,11 @@ export const PrestacaoContasForm: React.FC = () => {
     setFormData(prev => {
       const keys = path.split('.');
       let current = prev as any;
-      let parent = null;
 
       for (let i = 0; i < keys.length - 1; i++) {
         if (!current[keys[i]]) {
           current[keys[i]] = {};
         }
-        parent = current;
         current = current[keys[i]];
       }
 
