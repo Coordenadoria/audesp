@@ -1,0 +1,7 @@
+{
+  "name": "audesp-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Serverless API functions for AUDESP",
+  "type": "module"
+}
