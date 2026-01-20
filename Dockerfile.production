@@ -1,0 +1,43 @@
+FROM node:18-alpine as builder
+
+WORKDIR /app
+
+# Instalar dependências
+COPY package*.json ./
+RUN npm ci
+
+# Copiar código
+COPY . .
+
+# Build
+RUN npm run build
+
+# Stage 2: Produção
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Instalar serve para servir arquivos estáticos
+RUN npm install -g serve
+
+# Copiar build do stage anterior
+COPY --from=builder /app/build ./build
+COPY --from=builder /app/public ./public
+
+# Criar usuário não-root
+RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
+
+# Alterar propriedade dos arquivos
+RUN chown -R nextjs:nodejs /app
+
+USER nextjs
+
+# Expor porta
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3000', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"
+
+# Comando de execução
+CMD ["serve", "-s", "build", "-l", "3000"]
