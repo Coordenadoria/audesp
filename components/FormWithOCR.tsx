@@ -3,6 +3,7 @@ import PDFViewer from './PDFViewer';
 import JSONPreview from './JSONPreview';
 import { OCRService } from '../services/advancedOCRService';
 import { JSONValidator } from '../services/jsonValidationService';
+import SchemaMapperService from '../services/schemaMapperService';
 
 interface FormField {
   name: string;
@@ -49,7 +50,7 @@ export const FormWithOCR: React.FC<FormSchemaProps> = ({
     }
   }, []);
 
-  // Processar OCR
+  // Processar OCR com mapeamento automático para schema
   const handleProcessOCR = useCallback(async () => {
     if (!pdfFile) return;
 
@@ -63,14 +64,42 @@ export const FormWithOCR: React.FC<FormSchemaProps> = ({
         }
       });
 
-      // Detectar campos automaticamente
+      // Mapear dados extraídos para o schema de Prestação de Contas
+      const pdfDataForMapping = {
+        fullText: extracted.fullText || '',
+        tables: extracted.tables || [],
+        metadata: {
+          filename: pdfFile.name,
+          extractedAt: new Date().toISOString(),
+          pageCount: extracted.pageCount,
+        }
+      };
+
+      // Usar SchemaMapper para preencher automaticamente
+      const schemaMapeado = SchemaMapperService.mapearParaSchema(pdfDataForMapping);
+      const sugestoes = SchemaMapperService.sugerirPreenchimento(pdfDataForMapping);
+
+      // Detectar campos do schema original também
       const detected = OCRService.suggestMapping(extracted, schema);
 
-      setExtractedFields(detected);
+      // Combinar dados mapeados com dados detectados
+      const dadosCombinados = {
+        ...schemaMapeado,
+        ...detected,
+        ...sugestoes
+      };
+
+      setExtractedFields(dadosCombinados);
       setFormData(prev => ({
         ...prev,
-        ...detected
+        ...dadosCombinados
       }));
+
+      // Mostrar validação
+      const validacao = SchemaMapperService.validarContraSchema(schemaMapeado);
+      if (!validacao.valido) {
+        console.warn('Aviso de validação:', validacao.erros);
+      }
     } catch (error) {
       console.error('Erro ao processar OCR:', error);
       alert('Erro ao processar PDF. Tente novamente.');
