@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import AudespecValidator, { ValidationResult } from '../services/AudespecValidatorService';
 import AudespecClient from '../services/AudespecClientService';
+import LoginModal from './LoginModal';
 
 interface MenuItem {
   id: string;
@@ -66,8 +67,51 @@ const AudespecForm: React.FC<AudespecFormProps> = ({ onEnvioCompleto }) => {
   const [menuAberto, setMenuAberto] = useState(true);
   const [autenticado, setAutenticado] = useState(false);
   const [jsonView, setJsonView] = useState(false);
+  const [loginModalAberto, setLoginModalAberto] = useState(false);
+  const [carregando, setCarregando] = useState(false);
+  const [perfil, setPerfil] = useState('');
+  const [emailUsuario, setEmailUsuario] = useState('');
+  const [token, setToken] = useState('');
 
   const cliente = new AudespecClient();
+
+  // Recuperar autenticação ao carregar
+  useEffect(() => {
+    const tokenSalvo = localStorage.getItem('audesp_token');
+    const emailSalvo = localStorage.getItem('audesp_email');
+    const perfilSalvo = localStorage.getItem('audesp_perfil');
+    
+    if (tokenSalvo && emailSalvo && perfilSalvo) {
+      setToken(tokenSalvo);
+      setEmailUsuario(emailSalvo);
+      setPerfil(perfilSalvo);
+      setAutenticado(true);
+    }
+  }, []);
+
+  // Handleres de Login
+  const handleLoginAbrir = () => {
+    setLoginModalAberto(true);
+  };
+
+  const handleLoginSucesso = (email: string, novoToken: string, novoPerfil: string) => {
+    setEmailUsuario(email);
+    setToken(novoToken);
+    setPerfil(novoPerfil);
+    setAutenticado(true);
+    setLoginModalAberto(false);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('audesp_token');
+    localStorage.removeItem('audesp_email');
+    localStorage.removeItem('audesp_perfil');
+    localStorage.removeItem('audesp_nome');
+    setToken('');
+    setEmailUsuario('');
+    setPerfil('');
+    setAutenticado(false);
+  };
 
   // Menu hierárquico
   const menuItems: MenuItem[] = [
@@ -396,7 +440,7 @@ const AudespecForm: React.FC<AudespecFormProps> = ({ onEnvioCompleto }) => {
           <div className="flex items-center gap-4">
             {!autenticado ? (
               <button
-                onClick={() => setAutenticado(true)}
+                onClick={handleLoginAbrir}
                 className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center gap-2"
               >
                 <Lock size={16} />
@@ -405,10 +449,10 @@ const AudespecForm: React.FC<AudespecFormProps> = ({ onEnvioCompleto }) => {
             ) : (
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-700">
-                  Autenticado • Perfil: {perfil}
+                  ✅ {emailUsuario} • Perfil: <strong>{perfil}</strong>
                 </span>
                 <button
-                  onClick={() => setAutenticado(false)}
+                  onClick={handleLogout}
                   className="text-red-600 hover:text-red-800 text-sm font-semibold"
                 >
                   Sair
@@ -420,6 +464,12 @@ const AudespecForm: React.FC<AudespecFormProps> = ({ onEnvioCompleto }) => {
 
         {/* Conteúdo */}
         <div className="flex-1 overflow-y-auto p-6">
+          <LoginModal 
+            isOpen={loginModalAberto}
+            onClose={() => setLoginModalAberto(false)}
+            onLoginSuccess={handleLoginSucesso}
+          />
+          
           {validacao && (
             <div className="mb-6 bg-blue-50 border border-blue-200 rounded p-4">
               <p className="text-sm text-blue-800">
