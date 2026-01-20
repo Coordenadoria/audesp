@@ -1,0 +1,762 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Schema Prestação de Contas AUDESP",
+  "description": "Schema oficial para envio de prestação de contas ao AUDESP",
+  "type": "object",
+  "required": [
+    "descricao",
+    "entidade_beneficiaria",
+    "vigencia",
+    "responsaveis"
+  ],
+  "properties": {
+    "descricao": {
+      "type": "object",
+      "title": "Descritor",
+      "required": ["numero_siconv", "modalidade", "instrumento_juridico"],
+      "properties": {
+        "numero_siconv": {
+          "type": "string",
+          "title": "Número do SICONV",
+          "pattern": "^[0-9]{6}$",
+          "description": "Número único do convênio/transferência no SICONV"
+        },
+        "modalidade": {
+          "type": "string",
+          "title": "Modalidade",
+          "enum": [
+            "Convênio",
+            "Contrato de Gestão",
+            "Termo de Colaboração",
+            "Termo de Fomento",
+            "Termo de Parceria"
+          ]
+        },
+        "instrumento_juridico": {
+          "type": "string",
+          "title": "Instrumento Jurídico",
+          "minLength": 3,
+          "maxLength": 500
+        },
+        "numero_processo_tce": {
+          "type": "string",
+          "title": "Número do Processo TCE-SP",
+          "minLength": 10,
+          "maxLength": 20
+        },
+        "data_inicio": {
+          "type": "string",
+          "format": "date",
+          "title": "Data de Início"
+        },
+        "data_fim": {
+          "type": "string",
+          "format": "date",
+          "title": "Data de Fim"
+        }
+      }
+    },
+
+    "entidade_beneficiaria": {
+      "type": "object",
+      "title": "Dados da Entidade Beneficiária",
+      "required": ["razao_social", "cnpj", "tipo_entidade"],
+      "properties": {
+        "razao_social": {
+          "type": "string",
+          "title": "Razão Social",
+          "minLength": 3,
+          "maxLength": 200
+        },
+        "nome_fantasia": {
+          "type": "string",
+          "title": "Nome Fantasia",
+          "maxLength": 200
+        },
+        "cnpj": {
+          "type": "string",
+          "title": "CNPJ",
+          "pattern": "^[0-9]{14}$",
+          "description": "CNPJ sem formatação"
+        },
+        "tipo_entidade": {
+          "type": "string",
+          "enum": [
+            "OSC",
+            "Prefeitura",
+            "Câmara Municipal",
+            "Outro Ente Público",
+            "Empresa Pública",
+            "Empresa Privada"
+          ]
+        },
+        "natureza_juridica": {
+          "type": "string",
+          "title": "Natureza Jurídica",
+          "pattern": "^[0-9]{4}$"
+        },
+        "endereco": {
+          "type": "object",
+          "properties": {
+            "logradouro": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 200
+            },
+            "numero": {
+              "type": "string",
+              "maxLength": 10
+            },
+            "complemento": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "bairro": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 100
+            },
+            "cidade": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 100
+            },
+            "estado": {
+              "type": "string",
+              "pattern": "^[A-Z]{2}$"
+            },
+            "cep": {
+              "type": "string",
+              "pattern": "^[0-9]{8}$"
+            }
+          },
+          "required": ["logradouro", "numero", "bairro", "cidade", "estado", "cep"]
+        },
+        "telefone": {
+          "type": "string",
+          "pattern": "^[0-9]{10,11}$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "website": {
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+
+    "vigencia": {
+      "type": "object",
+      "title": "Vigência",
+      "required": ["data_inicio", "data_fim"],
+      "properties": {
+        "data_inicio": {
+          "type": "string",
+          "format": "date"
+        },
+        "data_fim": {
+          "type": "string",
+          "format": "date"
+        },
+        "prorrogacoes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "data_inicio": { "type": "string", "format": "date" },
+              "data_fim": { "type": "string", "format": "date" },
+              "justificativa": { "type": "string", "maxLength": 500 }
+            }
+          }
+        }
+      }
+    },
+
+    "responsaveis": {
+      "type": "array",
+      "title": "Responsáveis",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["nome", "cpf", "cargo", "funcao"],
+        "properties": {
+          "nome": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 200
+          },
+          "cpf": {
+            "type": "string",
+            "pattern": "^[0-9]{11}$"
+          },
+          "cargo": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 100
+          },
+          "funcao": {
+            "type": "string",
+            "enum": [
+              "Presidente",
+              "Diretor",
+              "Gestor",
+              "Contador",
+              "Tesoureiro",
+              "Outro"
+            ]
+          },
+          "telefone": {
+            "type": "string",
+            "pattern": "^[0-9]{10,11}$"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          }
+        }
+      }
+    },
+
+    "contratos": {
+      "type": "array",
+      "title": "Contratos",
+      "items": {
+        "type": "object",
+        "required": ["numero", "fornecedor_cnpj", "data_inicio", "data_fim", "valor_total"],
+        "properties": {
+          "numero": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 50
+          },
+          "fornecedor_razao_social": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 200
+          },
+          "fornecedor_cnpj": {
+            "type": "string",
+            "pattern": "^[0-9]{14}$"
+          },
+          "objeto": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 1000
+          },
+          "data_inicio": {
+            "type": "string",
+            "format": "date"
+          },
+          "data_fim": {
+            "type": "string",
+            "format": "date"
+          },
+          "valor_total": {
+            "type": "number",
+            "minimum": 0
+          },
+          "modalidade_licitacao": {
+            "type": "string",
+            "enum": [
+              "Licitação",
+              "Inexigibilidade",
+              "Dispensa",
+              "Pregão",
+              "Concorrência",
+              "Tomada de Preços"
+            ]
+          },
+          "numero_processo_licitacao": {
+            "type": "string",
+            "maxLength": 50
+          }
+        }
+      }
+    },
+
+    "documentos_fiscais": {
+      "type": "array",
+      "title": "Documentos Fiscais",
+      "items": {
+        "type": "object",
+        "required": ["numero", "fornecedor_cnpj", "data_emissao", "valor_total"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "Nota Fiscal Eletrônica",
+              "Nota Fiscal",
+              "Recibo",
+              "Cupom Fiscal",
+              "Nota Fiscal de Serviço",
+              "RPS"
+            ]
+          },
+          "numero": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 50
+          },
+          "serie": {
+            "type": "string",
+            "maxLength": 5
+          },
+          "fornecedor_razao_social": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 200
+          },
+          "fornecedor_cnpj": {
+            "type": "string",
+            "pattern": "^[0-9]{14}$"
+          },
+          "fornecedor_cpf": {
+            "type": "string",
+            "pattern": "^[0-9]{11}$"
+          },
+          "data_emissao": {
+            "type": "string",
+            "format": "date"
+          },
+          "valor_bruto": {
+            "type": "number",
+            "minimum": 0
+          },
+          "valor_desconto": {
+            "type": "number",
+            "minimum": 0
+          },
+          "valor_liquido": {
+            "type": "number",
+            "minimum": 0
+          },
+          "natureza_despesa": {
+            "type": "string",
+            "enum": [
+              "Pessoal",
+              "Material de Consumo",
+              "Serviços",
+              "Equipamentos",
+              "Obras",
+              "Transferências",
+              "Outro"
+            ]
+          },
+          "contrato_numero": {
+            "type": "string",
+            "maxLength": 50
+          },
+          "descricao_servico": {
+            "type": "string",
+            "maxLength": 500
+          }
+        }
+      }
+    },
+
+    "pagamentos": {
+      "type": "array",
+      "title": "Pagamentos",
+      "items": {
+        "type": "object",
+        "required": ["numero", "documento_fiscal_numero", "data_pagamento", "valor"],
+        "properties": {
+          "numero": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 50
+          },
+          "documento_fiscal_numero": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 50
+          },
+          "fornecedor_cnpj": {
+            "type": "string",
+            "pattern": "^[0-9]{14}$"
+          },
+          "data_pagamento": {
+            "type": "string",
+            "format": "date"
+          },
+          "valor": {
+            "type": "number",
+            "minimum": 0
+          },
+          "forma_pagamento": {
+            "type": "string",
+            "enum": [
+              "Dinheiro",
+              "Cheque",
+              "Transferência Bancária",
+              "Cartão de Crédito",
+              "PIX",
+              "Boleto"
+            ]
+          },
+          "numero_cheque": {
+            "type": "string",
+            "maxLength": 20
+          },
+          "banco": {
+            "type": "string",
+            "maxLength": 50
+          },
+          "agencia": {
+            "type": "string",
+            "maxLength": 10
+          },
+          "conta": {
+            "type": "string",
+            "maxLength": 20
+          }
+        }
+      }
+    },
+
+    "repasses": {
+      "type": "array",
+      "title": "Repasses Recebidos",
+      "items": {
+        "type": "object",
+        "required": ["numero_repasse", "data_repasse", "valor"],
+        "properties": {
+          "numero_repasse": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 50
+          },
+          "data_repasse": {
+            "type": "string",
+            "format": "date"
+          },
+          "valor": {
+            "type": "number",
+            "minimum": 0
+          },
+          "banco": {
+            "type": "string",
+            "maxLength": 50
+          },
+          "agencia": {
+            "type": "string",
+            "maxLength": 10
+          },
+          "conta": {
+            "type": "string",
+            "maxLength": 20
+          },
+          "tipo_transferencia": {
+            "type": "string",
+            "enum": ["TED", "DOC", "Depósito Direto", "Outro"]
+          }
+        }
+      }
+    },
+
+    "empregados": {
+      "type": "array",
+      "title": "Empregados/Funcionários",
+      "items": {
+        "type": "object",
+        "required": ["nome", "cpf", "cargo", "salario"],
+        "properties": {
+          "nome": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 200
+          },
+          "cpf": {
+            "type": "string",
+            "pattern": "^[0-9]{11}$"
+          },
+          "rg": {
+            "type": "string",
+            "maxLength": 20
+          },
+          "cargo": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 100
+          },
+          "salario": {
+            "type": "number",
+            "minimum": 0
+          },
+          "tipo_vinculo": {
+            "type": "string",
+            "enum": [
+              "CLT",
+              "Comissionado",
+              "Voluntário",
+              "Bolsista",
+              "Contratado",
+              "Outro"
+            ]
+          },
+          "data_admissao": {
+            "type": "string",
+            "format": "date"
+          },
+          "data_demissao": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      }
+    },
+
+    "bens": {
+      "type": "array",
+      "title": "Bens e Equipamentos",
+      "items": {
+        "type": "object",
+        "required": ["descricao", "valor"],
+        "properties": {
+          "descricao": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 300
+          },
+          "valor": {
+            "type": "number",
+            "minimum": 0
+          },
+          "quantidade": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "data_aquisicao": {
+            "type": "string",
+            "format": "date"
+          },
+          "data_incineracao": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      }
+    },
+
+    "devolucoes": {
+      "type": "array",
+      "title": "Devoluções de Recursos",
+      "items": {
+        "type": "object",
+        "required": ["motivo", "valor", "data"],
+        "properties": {
+          "motivo": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 500
+          },
+          "valor": {
+            "type": "number",
+            "minimum": 0
+          },
+          "data": {
+            "type": "string",
+            "format": "date"
+          },
+          "forma_devolucao": {
+            "type": "string",
+            "enum": [
+              "Transferência Bancária",
+              "Cheque",
+              "Depósito em Conta",
+              "Outro"
+            ]
+          }
+        }
+      }
+    },
+
+    "glosas": {
+      "type": "array",
+      "title": "Glosas/Ajustes",
+      "items": {
+        "type": "object",
+        "required": ["motivo", "valor"],
+        "properties": {
+          "motivo": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 500
+          },
+          "valor": {
+            "type": "number"
+          },
+          "parecer_tce": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "data_comunicacao": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      }
+    },
+
+    "declaracoes": {
+      "type": "object",
+      "title": "Declarações",
+      "properties": {
+        "declaracao_negativa": {
+          "type": "boolean",
+          "default": false
+        },
+        "data_declaracao": {
+          "type": "string",
+          "format": "date"
+        },
+        "justificativa_negativa": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "ausencia_irregularidades": {
+          "type": "boolean"
+        },
+        "ausencia_glosas": {
+          "type": "boolean"
+        }
+      }
+    },
+
+    "relatorios": {
+      "type": "object",
+      "title": "Relatórios",
+      "properties": {
+        "relatorio_execucao": {
+          "type": "string",
+          "maxLength": 5000
+        },
+        "relatorio_atividades": {
+          "type": "string",
+          "maxLength": 5000
+        },
+        "demonstrativo_fisico": {
+          "type": "string",
+          "maxLength": 5000
+        }
+      }
+    },
+
+    "parecer_conclusivo": {
+      "type": "object",
+      "title": "Parecer Conclusivo",
+      "properties": {
+        "conclusao": {
+          "type": "string",
+          "enum": [
+            "Aprovada",
+            "Aprovada com ressalvas",
+            "Rejeitada",
+            "Pendente análise"
+          ]
+        },
+        "parecer_texto": {
+          "type": "string",
+          "maxLength": 5000
+        },
+        "recomendacoes": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "data_parecer": {
+          "type": "string",
+          "format": "date"
+        },
+        "responsavel_parecer": {
+          "type": "string",
+          "maxLength": 200
+        }
+      }
+    },
+
+    "transparencia": {
+      "type": "object",
+      "title": "Transparência",
+      "properties": {
+        "publicado_portal": {
+          "type": "boolean"
+        },
+        "data_publicacao": {
+          "type": "string",
+          "format": "date"
+        },
+        "url_publicacao": {
+          "type": "string",
+          "format": "uri"
+        },
+        "formularios_disponiveis": {
+          "type": "boolean"
+        },
+        "documentacao_completa": {
+          "type": "boolean"
+        }
+      }
+    },
+
+    "metadata": {
+      "type": "object",
+      "title": "Metadados do Envio",
+      "properties": {
+        "versao_schema": {
+          "type": "string",
+          "default": "3.0"
+        },
+        "data_criacao": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "data_ultima_atualizacao": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "usuario_criacao": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "protocolo_audesp": {
+          "type": "string",
+          "pattern": "^AUDESP-[0-9]{4}-[0-9]{6}$"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "Rascunho",
+            "Pronto para envio",
+            "Enviado",
+            "Recebido",
+            "Processado",
+            "Rejeitado",
+            "Aprovado"
+          ]
+        },
+        "mensagens_validacao": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "campo": { "type": "string" },
+              "mensagem": { "type": "string" },
+              "tipo": {
+                "type": "string",
+                "enum": ["erro", "alerta", "info"]
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  "additionalProperties": false
+}

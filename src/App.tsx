@@ -6,6 +6,7 @@ import PDFOCRExtractor from './components/PDFOCRExtractor';
 import Dashboard from './components/Dashboard';
 import LoginComponent from './components/LoginComponent';
 import UserProfileManager from './components/UserProfileManager';
+import AudespecForm from './components/AudespecForm';
 import { calculateSummary, getAllSectionsStatus } from './services/validationService';
 import { sendPrestacaoContas } from './services/transmissionService';
 
@@ -25,7 +26,7 @@ const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [formData, setFormData] = useState(INITIAL_DATA);
   const [showSidebar, setShowSidebar] = useState(true);
-  const [activeView, setActiveView] = useState<'dashboard' | 'form' | 'summary' | 'json' | 'reports' | 'pdf'>('dashboard');
+  const [activeView, setActiveView] = useState<'dashboard' | 'form' | 'summary' | 'json' | 'reports' | 'pdf' | 'audespec'>('audespec');
   const [showTransmitModal, setShowTransmitModal] = useState(false);
   const [transmitStatus, setTransmitStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [transmissionHistory, setTransmissionHistory] = useState<any[]>([]);
@@ -116,6 +117,14 @@ const App: React.FC = () => {
               }`}
             >
               📋 Formulário
+            </button>
+            <button
+              onClick={() => setActiveView('audespec')}
+              className={`w-full text-left px-4 py-3 font-medium transition ${
+                activeView === 'audespec' ? 'bg-blue-700' : 'hover:bg-blue-700'
+              }`}
+            >
+              🏛️ AUDESP Real v3.0
             </button>
             <button
               onClick={() => setActiveView('pdf')}
@@ -239,6 +248,17 @@ const App: React.FC = () => {
         <div className="flex-1 overflow-auto">
           {activeView === 'dashboard' && (
             <Dashboard formData={formData} transmissionHistory={transmissionHistory} />
+          )}
+
+          {activeView === 'audespec' && (
+            <AudespecForm onEnvioCompleto={(protocolo) => {
+              alert(`Prestação enviada com sucesso! Protocolo: ${protocolo}`);
+              setTransmissionHistory([...transmissionHistory, {
+                protocolo,
+                data: new Date().toISOString(),
+                status: 'Enviado'
+              }]);
+            }} />
           )}
 
           {activeView === 'form' && (
