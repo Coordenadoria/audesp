@@ -1,7 +1,13 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "build",
-  "regions": ["sfo1"],
+  "public": true,
+  "regions": ["sfo1", "iad1"],
+  "env": {
+    "REACT_APP_ENV": "@react_app_env",
+    "REACT_APP_API_BASE_URL": "@react_app_api_base_url",
+    "REACT_APP_WS_BASE_URL": "@react_app_ws_base_url"
+  },
   "headers": [
     {
       "source": "/(.*)",
@@ -9,8 +15,39 @@
         {
           "key": "Cache-Control",
           "value": "public, max-age=3600, s-maxage=3600"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
         }
       ]
+    },
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "https://api.audesp.gov.br/api/$1"
     }
   ]
 }
