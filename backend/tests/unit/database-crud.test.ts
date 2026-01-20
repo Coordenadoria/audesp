@@ -1,4 +1,5 @@
 // backend/tests/unit/database-crud.test.ts
+import 'reflect-metadata';
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { AppDataSource, initializeDatabase, disconnectDatabase } from '../../src/config/database';
 import { User, UserRole } from '../../src/entities/User';
@@ -22,15 +23,16 @@ describe('Database CRUD Operations', () => {
   });
 
   beforeEach(async () => {
-    // Create a test user for each test
+    // Create a test user for each test with unique CPF
     const userRepository = AppDataSource.getRepository(User);
     const hashedPassword = await hashPassword('test123');
+    const uniqueCPF = String(Date.now()).slice(-11).padStart(11, '1'); // Generate unique CPF
 
     testUser = await userRepository.save({
       email: `test-${Date.now()}@example.com`,
       password: hashedPassword,
       nome: 'Test User',
-      cpf: '12345678901',
+      cpf: uniqueCPF,
       role: UserRole.GESTOR,
     });
   });
@@ -179,8 +181,8 @@ describe('Database CRUD Operations', () => {
       const summary = await prestacaoService.getFinancialSummary(created.id);
 
       expect(summary).toBeDefined();
-      expect(summary!.saldoInicial).toBe(1000);
-      expect(summary!.totalReceitas).toBe(500);
+      expect(Number(summary!.saldoInicial)).toBe(1000);
+      expect(Number(summary!.totalReceitas)).toBe(500);
     });
 
     it('should update financial totals', async () => {

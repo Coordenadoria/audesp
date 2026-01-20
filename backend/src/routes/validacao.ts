@@ -3,12 +3,11 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { authMiddleware } from '../middleware/auth';
 import ValidationService from '../services/ValidationService';
-import { PrestacaoService } from '../services/PrestacaoService';
+import { prestacaoService } from '../services/PrestacaoService';
 import { logger } from '../config/logger';
 
 const router = Router();
 const validationService = ValidationService;
-const prestacaoService = PrestacaoService.getInstance();
 
 /**
  * Schema para validação
@@ -31,7 +30,7 @@ router.post('/validate', authMiddleware, async (req: Request, res: Response) => 
     // Obter prestação
     let prestacao;
     try {
-      prestacao = await prestacaoService.getById(usuarioId, prestacaoId);
+      prestacao = await prestacaoService.getPrestacaoById(prestacaoId);
     } catch (error) {
       return res.status(404).json({
         error: 'Prestação não encontrada',
@@ -89,7 +88,7 @@ router.post('/validate-batch', authMiddleware, async (req: Request, res: Respons
 
     for (const prestacaoId of prestacaoIds) {
       try {
-        const prestacao = await prestacaoService.getById(usuarioId, prestacaoId);
+        const prestacao = await prestacaoService.getPrestacaoById(prestacaoId);
         const resultado = await validationService.validate(prestacao);
         resultados.push({
           prestacaoId,

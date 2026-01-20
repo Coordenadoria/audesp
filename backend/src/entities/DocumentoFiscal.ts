@@ -24,31 +24,31 @@ export class DocumentoFiscal {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column('varchar', { length: 50 })
   numero: string;
 
-  @Column()
+  @Column('varchar', { length: 10 })
   serie: string;
 
   @Column({ type: 'enum', enum: DocumentoTipo })
   tipo: DocumentoTipo;
 
-  @Column()
+  @Column('date')
   data: Date;
 
   @Column('decimal', { precision: 15, scale: 2 })
   valor: number;
 
-  @Column({ nullable: true })
+  @Column('text', { nullable: true })
   descricao: string;
 
-  @Column({ nullable: true })
+  @Column('varchar', { length: 255, nullable: true })
   fornecedor: string;
 
-  @Column({ nullable: true })
+  @Column('varchar', { length: 14, nullable: true })
   cnpjFornecedor: string;
 
-  @Column({ nullable: true })
+  @Column('varchar', { length: 50, nullable: true })
   contaContabil: string;
 
   @Column({ type: 'jsonb', nullable: true })
@@ -59,16 +59,16 @@ export class DocumentoFiscal {
     subtotal: number;
   }>;
 
-  @Column({ nullable: true })
+  @Column('varchar', { length: 255, nullable: true })
   caminhoArquivo: string;
 
-  @Column({ nullable: true })
+  @Column('varchar', { length: 64, nullable: true })
   hashArquivo: string;
 
-  @Column({ default: false })
+  @Column('boolean', { default: false })
   validado: boolean;
 
-  @Column({ nullable: true })
+  @Column('text', { nullable: true })
   observacoes: string;
 
   @CreateDateColumn()

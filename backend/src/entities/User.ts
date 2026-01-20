@@ -21,31 +21,31 @@ export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ unique: true })
+  @Column('varchar', { length: 255, unique: true })
   email: string;
 
-  @Column()
+  @Column('varchar', { length: 255 })
   password: string;
 
-  @Column()
+  @Column('varchar', { length: 255 })
   nome: string;
 
-  @Column({ nullable: true })
+  @Column('varchar', { length: 11, nullable: true })
   cpf: string;
 
-  @Column({ nullable: true })
+  @Column('varchar', { length: 14, nullable: true })
   cnpj: string;
 
   @Column({ type: 'enum', enum: UserRole, default: UserRole.VIEWER })
   role: UserRole;
 
-  @Column({ default: true })
+  @Column('boolean', { default: true })
   ativo: boolean;
 
-  @Column({ nullable: true })
+  @Column('timestamp', { nullable: true })
   ultimoLogin: Date;
 
-  @Column({ nullable: true })
+  @Column('varchar', { length: 20, nullable: true })
   telefone: string;
 
   @CreateDateColumn()

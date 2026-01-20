@@ -32,32 +32,32 @@ export class Prestacao {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column('varchar', { length: 50 })
   numero: string;
 
-  @Column()
+  @Column('varchar', { length: 7 })
   competencia: string; // YYYY-MM format
 
   @Column({ type: 'enum', enum: PrestacaoStatus, default: PrestacaoStatus.RASCUNHO })
   status: PrestacaoStatus;
 
   // Descritor data
-  @Column({ nullable: true })
+  @Column('varchar', { length: 255, nullable: true })
   nomeGestor: string;
 
-  @Column({ nullable: true })
+  @Column('varchar', { length: 11, nullable: true })
   cpfGestor: string;
 
-  @Column({ nullable: true })
+  @Column('varchar', { length: 255, nullable: true })
   nomeResponsavelPrincipal: string;
 
-  @Column({ nullable: true })
+  @Column('varchar', { length: 11, nullable: true })
   cpfResponsavelPrincipal: string;
 
-  @Column({ nullable: true })
+  @Column('varchar', { length: 255, nullable: true })
   nomeOrgaoOrigem: string;
 
-  @Column({ nullable: true })
+  @Column('varchar', { length: 50, nullable: true })
   codigoOrgaoOrigem: string;
 
   // Financial data
@@ -77,30 +77,30 @@ export class Prestacao {
   totalPagamentos: number;
 
   // LGPD Compliance
-  @Column({ default: false })
+  @Column('boolean', { default: false })
   possuiDadosPessoais: boolean;
 
-  @Column({ default: false })
+  @Column('boolean', { default: false })
   consentimentoLGPD: boolean;
 
-  @Column({ nullable: true })
+  @Column('date', { nullable: true })
   dataConsentimentoLGPD: Date;
 
   // Validation
-  @Column({ default: false })
+  @Column('boolean', { default: false })
   validado: boolean;
 
-  @Column({ nullable: true })
+  @Column('date', { nullable: true })
   dataValidacao: Date;
 
-  @Column({ nullable: true })
+  @Column('text', { nullable: true })
   validacaoErros: string; // JSON stringified errors
 
-  @Column({ nullable: true })
+  @Column('text', { nullable: true })
   validacaoAvisos: string; // JSON stringified warnings
 
   // Metadata
-  @Column({ nullable: true })
+  @Column('text', { nullable: true })
   observacoes: string;
 
   @Column({ type: 'jsonb', nullable: true })

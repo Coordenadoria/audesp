@@ -25,40 +25,40 @@ export class Responsavel {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column('varchar', { length: 255 })
   nome: string;
 
-  @Column()
+  @Column('varchar', { length: 11 })
   cpf: string;
 
   @Column({ type: 'enum', enum: ResponsavelTipo })
   tipo: ResponsavelTipo;
 
-  @Column()
+  @Column('varchar', { length: 100 })
   cargo: string;
 
-  @Column({ nullable: true })
+  @Column('varchar', { length: 255, nullable: true })
   email: string;
 
-  @Column({ nullable: true })
+  @Column('varchar', { length: 20, nullable: true })
   telefone: string;
 
-  @Column()
+  @Column('date')
   dataInicio: Date;
 
-  @Column({ nullable: true })
+  @Column('date', { nullable: true })
   dataFim: Date;
 
-  @Column({ default: false })
+  @Column('boolean', { default: false })
   consentimentoLGPD: boolean;
 
-  @Column({ nullable: true })
+  @Column('date', { nullable: true })
   dataConsentimento: Date;
 
-  @Column({ default: true })
+  @Column('boolean', { default: true })
   ativo: boolean;
 
-  @Column({ nullable: true })
+  @Column('text', { nullable: true })
   observacoes: string;
 
   @CreateDateColumn()

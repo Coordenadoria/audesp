@@ -1,5 +1,5 @@
 // src/services/AuthService.ts
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { config } from '../config/env.js';
 import { logger } from '../config/logger.js';
@@ -48,7 +48,7 @@ export class AuthService {
       logger.info(`Novo usuário registrado: ${input.email}`);
 
       // Remove senhaHash da resposta
-      const { senhaHash, ...userResponse } = user;
+      const { senhaHash: _, ...userResponse } = user;
       return userResponse as User;
     } catch (error) {
       logger.error(`Erro ao registrar usuário: ${error}`);
@@ -184,10 +184,12 @@ export class AuthService {
       email: user.email,
     };
 
-    return jwt.sign(payload, config.jwt.secret, {
-      expiresIn: config.jwt.expiresIn,
+    const options: SignOptions = {
+      expiresIn: config.jwt.expiresIn as any,
       algorithm: 'HS256',
-    });
+    };
+
+    return jwt.sign(payload, config.jwt.secret, options);
   }
 
   /**
@@ -199,10 +201,12 @@ export class AuthService {
       email: user.email,
     };
 
-    return jwt.sign(payload, config.jwt.refreshSecret, {
-      expiresIn: config.jwt.refreshExpiresIn,
+    const options: SignOptions = {
+      expiresIn: config.jwt.refreshExpiresIn as any,
       algorithm: 'HS256',
-    });
+    };
+
+    return jwt.sign(payload, config.jwt.refreshSecret, options);
   }
 
   /**

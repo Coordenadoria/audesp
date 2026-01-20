@@ -3,8 +3,8 @@ import { defineConfig } from 'vitest/config';
 import path from 'path';
 import dotenv from 'dotenv';
 
-// Load test environment variables
-dotenv.config({ path: path.resolve(__dirname, '.env.test') });
+// Load test environment variables from .env
+dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 export default defineConfig({
   test: {

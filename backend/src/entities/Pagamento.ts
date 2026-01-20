@@ -26,7 +26,7 @@ export class Pagamento {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column('varchar', { length: 50 })
   numero: string;
 
   @Column({ type: 'enum', enum: PagamentoStatus, default: PagamentoStatus.PENDENTE })
@@ -35,34 +35,34 @@ export class Pagamento {
   @Column('decimal', { precision: 15, scale: 2 })
   valor: number;
 
-  @Column()
+  @Column('date')
   dataPagamento: Date;
 
-  @Column({ nullable: true })
+  @Column('date', { nullable: true })
   dataProcessamento: Date;
 
-  @Column({ nullable: true })
+  @Column('text', { nullable: true })
   descricao: string;
 
-  @Column({ nullable: true })
+  @Column('varchar', { length: 255, nullable: true })
   beneficiario: string;
 
-  @Column({ nullable: true })
+  @Column('varchar', { length: 14, nullable: true })
   cpfCnpjBeneficiario: string;
 
-  @Column({ nullable: true })
+  @Column('varchar', { length: 20, nullable: true })
   contaBancaria: string;
 
-  @Column({ nullable: true })
+  @Column('varchar', { length: 10, nullable: true })
   agenciaBancaria: string;
 
-  @Column({ nullable: true })
+  @Column('varchar', { length: 10, nullable: true })
   bancoId: string;
 
-  @Column({ nullable: true })
+  @Column('varchar', { length: 50, nullable: true })
   numeroDocumento: string;
 
-  @Column({ nullable: true })
+  @Column('varchar', { length: 100, nullable: true })
   ordenacao: string;
 
   @Column({ type: 'jsonb', nullable: true })
@@ -72,10 +72,10 @@ export class Pagamento {
     dataUpload: Date;
   }>;
 
-  @Column({ default: false })
+  @Column('boolean', { default: false })
   validado: boolean;
 
-  @Column({ nullable: true })
+  @Column('text', { nullable: true })
   observacoes: string;
 
   @CreateDateColumn()

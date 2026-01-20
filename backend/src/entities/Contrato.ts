@@ -18,16 +18,16 @@ export class Contrato {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column('varchar', { length: 50 })
   numero: string;
 
-  @Column()
+  @Column('text')
   descricao: string;
 
-  @Column()
+  @Column('date')
   dataInicio: Date;
 
-  @Column({ nullable: true })
+  @Column('date', { nullable: true })
   dataFim: Date;
 
   @Column('decimal', { precision: 15, scale: 2 })
@@ -39,19 +39,19 @@ export class Contrato {
   @Column('decimal', { precision: 15, scale: 2, default: 0 })
   valorPendente: number;
 
-  @Column({ nullable: true })
+  @Column('varchar', { length: 255, nullable: true })
   fornecedor: string;
 
-  @Column({ nullable: true })
+  @Column('varchar', { length: 14, nullable: true })
   cnpjFornecedor: string;
 
-  @Column({ nullable: true })
+  @Column('varchar', { length: 255, nullable: true })
   nomeResponsavel: string;
 
-  @Column({ nullable: true })
+  @Column('varchar', { length: 11, nullable: true })
   cpfResponsavel: string;
 
-  @Column({ default: true })
+  @Column('boolean', { default: true })
   ativo: boolean;
 
   @Column({ type: 'jsonb', nullable: true })
@@ -62,7 +62,7 @@ export class Contrato {
     data: string;
   }>;
 
-  @Column({ nullable: true })
+  @Column('text', { nullable: true })
   observacoes: string;
 
   @CreateDateColumn()
