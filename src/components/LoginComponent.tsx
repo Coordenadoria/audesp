@@ -46,8 +46,8 @@ const LoginComponent: React.FC<{ onSuccess: (user: any) => void }> = ({ onSucces
         return;
       }
 
-      // Conectar com API AUDESP real
-      const response = await LoginService.login(email, password);
+      // Conectar com API AUDESP real via Proxy
+      const response = await LoginService.login(email, password, environment);
       
       if (!response.success) {
         setError(response.message || 'Erro ao fazer login');

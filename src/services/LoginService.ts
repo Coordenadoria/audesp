@@ -22,13 +22,13 @@ export interface LoginResponse {
 }
 
 class LoginService {
-  private apiUrl = process.env.REACT_APP_AUDESP_URL || 'https://sistemas.tce.sp.gov.br/audesp/api';
+  private proxyUrl = '/api/login'; // Vercel API Route (proxy)
   private apiKey = process.env.REACT_APP_AUDESP_API_KEY || '';
 
   /**
-   * Fazer login com credenciais reais na API AUDESP
+   * Fazer login com credenciais reais na API AUDESP via Proxy
    */
-  async login(email: string, senha: string): Promise<LoginResponse> {
+  async login(email: string, senha: string, ambiente: 'piloto' | 'producao' = 'piloto'): Promise<LoginResponse> {
     try {
       // Validar entrada
       if (!email || !senha) {
@@ -45,8 +45,8 @@ class LoginService {
         };
       }
 
-      // Conectar com API AUDESP real
-      return this.loginReal(email, senha);
+      // Conectar via proxy (Vercel API Route)
+      return this.loginReal(email, senha, ambiente);
     } catch (error) {
       console.error('Erro crítico no login:', error);
       return {
@@ -57,10 +57,10 @@ class LoginService {
   }
 
   /**
-   * Autenticação via API AUDESP Real
+   * Autenticação via Vercel API Proxy (resolve CORS issues)
    */
-  private async loginReal(email: string, senha: string): Promise<LoginResponse> {
-    const url = `${this.apiUrl}/login`;
+  private async loginReal(email: string, senha: string, ambiente: 'piloto' | 'producao' = 'piloto'): Promise<LoginResponse> {
+    const url = this.proxyUrl;
     
     try {
       console.log(`
@@ -85,11 +85,8 @@ class LoginService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-authorization': authHeader,
-          ...(this.apiKey && { 'x-api-key': this.apiKey })
         },
-        credentials: 'include',
-        body: body
+        body: JSON.stringify({ email, senha, ambiente })
       });
 
       console.log(`\n[Login] 📡 Resposta Recebida:
