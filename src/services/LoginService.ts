@@ -73,13 +73,9 @@ class LoginService {
 ║ Método:    POST                                            ║
 ╚════════════════════════════════════════════════════════════╝`);
 
-      const body = JSON.stringify({ email, senha });
-      const authHeader = `${email}:${senha}`;
-      
       console.log(`[Login] Headers:
   - Content-Type: application/json
-  - x-authorization: [email:senha]
-  - credentials: include`);
+  - Body: { email, senha, ambiente }`);
 
       const response = await fetch(url, {
         method: 'POST',
