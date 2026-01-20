@@ -63,13 +63,15 @@ app.get('/api/status', (req: Request, res: Response) => {
   });
 });
 
-// TODO: Importar rotas
-// import authRoutes from './routes/auth.js';
+// Auth routes
+import authRoutes from './routes/auth.js';
+app.use('/api/auth', authRoutes);
+
+// TODO: Importar rotas adicionais
 // import prestacaoRoutes from './routes/prestacoes.js';
 // import validacaoRoutes from './routes/validacao.js';
 // import auditoriaRoutes from './routes/auditoria.js';
 
-// app.use('/api/auth', authRoutes);
 // app.use('/api/prestacoes', prestacaoRoutes);
 // app.use('/api/validate', validacaoRoutes);
 // app.use('/api/auditoria', auditoriaRoutes);
