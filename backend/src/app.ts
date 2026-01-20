@@ -65,14 +65,14 @@ app.get('/api/status', (req: Request, res: Response) => {
 
 // Auth routes
 import authRoutes from './routes/auth.js';
+import prestacaoRoutes from './routes/prestacoes.js';
 app.use('/api/auth', authRoutes);
+app.use('/api/prestacoes', prestacaoRoutes);
 
 // TODO: Importar rotas adicionais
-// import prestacaoRoutes from './routes/prestacoes.js';
 // import validacaoRoutes from './routes/validacao.js';
 // import auditoriaRoutes from './routes/auditoria.js';
 
-// app.use('/api/prestacoes', prestacaoRoutes);
 // app.use('/api/validate', validacaoRoutes);
 // app.use('/api/auditoria', auditoriaRoutes);
 
