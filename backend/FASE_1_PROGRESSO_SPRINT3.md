@@ -1,9 +1,10 @@
 # Fase 1: MVP Backend - Progresso Atualizado
 
 **Data**: 2026-01-20
-**Status Geral**: 50% COMPLETO ✅
+**Status Geral**: 57% COMPLETO 🔄 (Sprints 0-3 completos, Sprint 4 em progresso)
 **Sprints Completados**: 0, 1, 2, 3
-**Próximo Sprint**: Sprint 4 (TypeORM Database Integration)
+**Sprint Atual**: Sprint 4 (40% completo)
+**Próximo Sprint**: Sprint 5 (JSON Export Service)
 
 ---
 
@@ -188,38 +189,50 @@ Total:   68/68 ✅ (100% Pass Rate)
 - [x] Validation endpoints
 - [x] 25 comprehensive tests
 
-**Sprint 4 - Database Integration** ⏳ (Next)
-- [ ] TypeORM setup
-- [ ] Entity mapping
-- [ ] Connection pooling
-- [ ] Migration system
-- [ ] Transaction support
-- [ ] Database constraints
+### Sprint 4: Database Integration 🔄 IN PROGRESS (40%)
+- **Status**: TypeORM entities created, migrations prepared, services updated
+- **Completed**:
+  - 6 TypeORM entities with relationships (User, Prestacao, DocumentoFiscal, Pagamento, Responsavel, Contrato)
+  - Initial migration with all tables, indexes, and foreign keys
+  - Database configuration and connection pooling
+  - UserService (fully database-backed)
+  - PrestacaoService (fully database-backed CRUD)
+  - 22 database CRUD tests (awaiting type fixes)
+  - Docker containers (PostgreSQL + Redis) running
+  - .env configuration with all variables
+- **In Progress**:
+  - TypeScript compilation fixes
+  - Route updates for new service methods
+  - Database test execution and validation
+  - Integration with validation service
+- **Commits**: 2 commits (entity/service setup + progress doc)
+- **Data**: Sprint Week 4 (Started 2026-01-20)
 
 ---
 
 ## 🚀 Próximas Ações
 
-1. **Immediate** (Sprint 4):
-   - Set up TypeORM
-   - Create entity mappings
-   - Set up PostgreSQL connection
-   - Implement database persistence
+1. **Current Sprint (Sprint 4 Continuation)**:
+   - Fix TypeScript compilation errors in routes and services
+   - Run database CRUD tests and fix failures
+   - Integrate ValidationService with database persistence
+   - Test transaction handling
+   - Create database relationship tests
 
-2. **Week 5** (Sprint 5):
-   - JSON export service
-   - PDF generation
-   - Report templates
+2. **Week 5 (Sprint 5)**:
+   - JSON export service implementation
+   - PDF report generation
+   - Batch export operations
 
-3. **Week 6** (Sprint 6):
-   - E2E testing
-   - Load testing
+3. **Week 6 (Sprint 6)**:
+   - E2E testing with real database
+   - Load testing with concurrent users
    - Security audit
 
-4. **Week 7** (Sprint 7):
-   - Production deployment
-   - Monitoring setup
-   - Documentation
+4. **Week 7 (Sprint 7)**:
+   - Production deployment setup
+   - Monitoring and logging
+   - Documentation finalization
 
 ---
 
