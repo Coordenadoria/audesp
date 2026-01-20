@@ -1,73 +1,18 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import * as https from 'https';
-import * as http from 'http';
-import { URL } from 'url';
-
-/**
- * Proxy API para Login AUDESP
- * Resolves CORS issues by making requests from server-side
- * 
- * POST /api/login
- * Body: { email: string, senha: string, ambiente: 'piloto' | 'producao' }
- */
-
-// Helper function para fazer request via http/https
-function makeRequest(urlString: string, options: any, body: string): Promise<any> {
-  return new Promise((resolve, reject) => {
-    const url = new URL(urlString);
-    const isHttps = url.protocol === 'https:';
-    const protocol = isHttps ? https : http;
-    
-    const requestOptions = {
-      hostname: url.hostname,
-      port: url.port,
-      path: url.pathname + url.search,
-      method: options.method || 'GET',
-      headers: options.headers || {}
-    };
-
-    const req = protocol.request(requestOptions, (res) => {
-      let data = '';
-      
-      res.on('data', (chunk: Buffer) => {
-        data += chunk.toString();
-      });
-      
-      res.on('end', () => {
-        resolve({
-          status: res.statusCode || 500,
-          headers: res.headers,
-          body: data
-        });
-      });
-    });
-    
-    req.on('error', reject);
-    
-    if (body) {
-      req.write(body);
-    }
-    
-    req.end();
-  });
-}
 
 export default async function handler(
   req: VercelRequest,
   res: VercelResponse
 ) {
-  // Only allow POST requests
+  // Apenas POST
   if (req.method !== 'POST') {
-    return res.status(405).json({ 
-      success: false, 
-      message: 'Method not allowed' 
-    });
+    return res.status(405).json({ success: false, message: 'Method not allowed' });
   }
 
   try {
     const { email, senha, ambiente = 'piloto' } = req.body;
 
-    // Validar entrada
     if (!email || !senha) {
       return res.status(400).json({
         success: false,
@@ -75,80 +20,92 @@ export default async function handler(
       });
     }
 
-    // Determinar URL baseado no ambiente
+    console.log(`[Login API] Email: ${email}, Ambiente: ${ambiente}`);
+
+    // URL da API AUDESP
     const baseUrl = ambiente === 'producao'
       ? 'https://audesp.tce.sp.gov.br'
       : 'https://audesp-piloto.tce.sp.gov.br';
 
-    const apiUrl = `${baseUrl}/login`;
+    const path = '/login';
     const authHeader = `${email}:${senha}`;
+    const bodyStr = JSON.stringify({ email, senha });
 
-    console.log(`[API Proxy] Login attempt for: ${email}`);
-    console.log(`[API Proxy] URL: ${apiUrl}`);
-    console.log(`[API Proxy] Ambiente: ${ambiente}`);
+    // Fazer request HTTPS
+    return new Promise((resolve) => {
+      const options = {
+        hostname: new URL(baseUrl).hostname,
+        port: 443,
+        path: path,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(bodyStr),
+          'x-authorization': authHeader,
+        }
+      };
 
-    // Fazer requisição para API AUDESP usando http/https nativo
-    const requestOptions = {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-authorization': authHeader,
-      }
-    };
+      const request = https.request(options, (response) => {
+        let data = '';
 
-    const response = await makeRequest(apiUrl, requestOptions, JSON.stringify({ email, senha }));
+        response.on('data', (chunk) => {
+          data += chunk;
+        });
 
-    console.log(`[API Proxy] Response status: ${response.status}`);
+        response.on('end', () => {
+          console.log(`[Login API] Response status: ${response.statusCode}`);
+          
+          let responseData: any = {};
+          
+          // Tentar parsear JSON
+          try {
+            responseData = JSON.parse(data);
+          } catch {
+            responseData = { raw: data };
+          }
 
-    // Ler resposta
-    let data: any = {};
-    const contentType = response.headers['content-type'] as string;
+          // Tratamento de erro
+          if (response.statusCode && response.statusCode >= 400) {
+            return resolve(res.status(response.statusCode).json({
+              success: false,
+              message: responseData.message || responseData.mensagem || `HTTP ${response.statusCode}`,
+            }));
+          }
 
-    if (contentType?.includes('application/json')) {
-      try {
-        data = JSON.parse(response.body);
-      } catch (parseError) {
-        console.error('[API Proxy] Error parsing JSON:', parseError);
-        data = { raw: response.body };
-      }
-    } else {
-      data = { raw: response.body };
-    }
-
-    // Erro na resposta
-    if (response.status && response.status >= 400) {
-      console.error(`[API Proxy] Error response:`, data);
-      return res.status(response.status).json({
-        success: false,
-        message: data.message || data.mensagem || data.msg || `HTTP ${response.status}`,
-        campos_invalidos: data.campos_invalidos || data.campos_inválidos || data.erros,
+          // Sucesso
+          return resolve(res.status(200).json({
+            success: true,
+            token: responseData.token || responseData.access_token,
+            expire_in: responseData.expire_in || 86400,
+            token_type: responseData.token_type || 'bearer',
+            message: 'Autenticado com sucesso',
+            usuario: {
+              email,
+              nome: responseData.nome || email.split('@')[0],
+              perfil: responseData.perfil || 'Usuário',
+            },
+          }));
+        });
       });
-    }
 
-    // Sucesso
-    console.log('[API Proxy] Login successful');
-    return res.status(200).json({
-      success: true,
-      token: data.token || data.access_token || data.jwt,
-      expire_in: data.expire_in || data.expires_in || 86400,
-      token_type: data.token_type || 'bearer',
-      message: 'Autenticado com sucesso',
-      usuario: {
-        email,
-        nome: data.nome || data.usuario || data.name || email.split('@')[0],
-        perfil: data.perfil || data.role || data.permission || 'Usuário',
-        cpf: data.cpf || data.document,
-      },
+      request.on('error', (error) => {
+        console.error('[Login API] Request error:', error);
+        return resolve(res.status(500).json({
+          success: false,
+          message: `Erro ao conectar: ${error.message}`,
+        }));
+      });
+
+      request.write(bodyStr);
+      request.end();
     });
 
   } catch (error) {
-    console.error('[API Proxy] Critical error:', error);
-    const message = error instanceof Error ? error.message : String(error);
-    
+    console.error('[Login API] Exception:', error);
+    const msg = error instanceof Error ? error.message : String(error);
     return res.status(500).json({
       success: false,
-      message: `Erro ao conectar com AUDESP: ${message}`,
-      error: process.env.NODE_ENV === 'development' ? message : undefined,
+      message: `Erro: ${msg}`,
     });
   }
 }
