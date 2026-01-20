@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Download, Upload, Send, AlertCircle, CheckCircle, Menu, X, LogOut } from 'lucide-react';
+import { Download, Upload, Send, AlertCircle, CheckCircle, Menu, X, LogOut, Users } from 'lucide-react';
 import FormBuilder from './components/FormBuilder';
 import ReportGenerator from './components/ReportGenerator';
 import PDFOCRExtractor from './components/PDFOCRExtractor';
 import Dashboard from './components/Dashboard';
 import LoginComponent from './components/LoginComponent';
+import UserProfileManager from './components/UserProfileManager';
 import { calculateSummary, getAllSectionsStatus } from './services/validationService';
 import { sendPrestacaoContas } from './services/transmissionService';
 
@@ -28,6 +29,7 @@ const App: React.FC = () => {
   const [showTransmitModal, setShowTransmitModal] = useState(false);
   const [transmitStatus, setTransmitStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [transmissionHistory, setTransmissionHistory] = useState<any[]>([]);
+  const [showUserManager, setShowUserManager] = useState(false);
 
   // Mover hooks para fora do condicional
   const summary = useMemo(() => calculateSummary(formData), [formData]);
@@ -165,12 +167,18 @@ const App: React.FC = () => {
           </div>
 
           {/* User Info */}
-          <div className="p-4 border-t border-blue-700 bg-blue-700">
-            <div className="text-sm mb-3">
+          <div className="p-4 border-t border-blue-700 bg-blue-700 space-y-2">
+            <div className="text-sm">
               <p className="font-semibold text-blue-100">{currentUser?.name}</p>
               <p className="text-xs text-blue-300">CPF: {currentUser?.cpf}</p>
               <p className="text-xs text-blue-300">Amb: {currentUser?.environment}</p>
             </div>
+            <button
+              onClick={() => setShowUserManager(true)}
+              className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white py-2 rounded font-medium transition text-sm"
+            >
+              <Users size={16} /> Usuários
+            </button>
             <button
               onClick={() => {
                 setIsLoggedIn(false);
@@ -451,6 +459,9 @@ const App: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* User Profile Manager */}
+      <UserProfileManager isOpen={showUserManager} onClose={() => setShowUserManager(false)} currentUser={currentUser} />
     </div>
   );
 };
