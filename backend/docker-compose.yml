@@ -1,23 +1,68 @@
 version: '3.8'
 
 services:
-  ocr-backend:
-    build: .
-    container_name: audesp-ocr-backend
-    ports:
-      - "8000:8000"
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: audesp-postgres
     environment:
-      - API_HOST=0.0.0.0
-      - API_PORT=8000
-      - OCR_PREPROCESS=true
-      - OCR_DPI=300
+      POSTGRES_DB: ${DATABASE_NAME:-audesp_dev}
+      POSTGRES_USER: ${DATABASE_USER:-audesp}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-audesp_password_dev}
+    ports:
+      - "5432:5432"
     volumes:
-      - ./:/app
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+      - postgres_data:/var/lib/postgresql/data
+      - ../DATABASE_SCHEMA.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    networks:
+      - audesp-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
+      test: ["CMD-SHELL", "pg_isready -U audesp"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: audesp-redis
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - audesp-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Python OCR Backend (Futuro)
+  # ocr-backend:
+  #   build:
+  #     context: ./ocr
+  #     dockerfile: Dockerfile
+  #   container_name: audesp-ocr-backend
+  #   ports:
+  #     - "8000:8000"
+  #   environment:
+  #     - API_HOST=0.0.0.0
+  #     - API_PORT=8000
+  #     - OCR_PREPROCESS=true
+  #     - OCR_DPI=300
+  #   volumes:
+  #     - ./ocr:/app
+  #   command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  audesp-network:
+    driver: bridge
       retries: 3
       start_period: 40s
 
