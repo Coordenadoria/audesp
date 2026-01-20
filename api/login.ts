@@ -1,4 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
+import https from 'https';
+import http from 'http';
 
 /**
  * Proxy API para Login AUDESP
@@ -7,6 +9,37 @@ import { VercelRequest, VercelResponse } from '@vercel/node';
  * POST /api/login
  * Body: { email: string, senha: string, ambiente: 'piloto' | 'producao' }
  */
+
+// Helper function para fazer request via http/https
+function makeRequest(url: string, options: any, body: string): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const protocol = url.startsWith('https') ? https : http;
+    
+    const req = protocol.request(url, options, (res) => {
+      let data = '';
+      
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+      
+      res.on('end', () => {
+        resolve({
+          status: res.statusCode,
+          headers: res.headers,
+          body: data
+        });
+      });
+    });
+    
+    req.on('error', reject);
+    
+    if (body) {
+      req.write(body);
+    }
+    
+    req.end();
+  });
+}
 
 export default async function handler(
   req: VercelRequest,
@@ -43,41 +76,40 @@ export default async function handler(
     console.log(`[API Proxy] URL: ${apiUrl}`);
     console.log(`[API Proxy] Ambiente: ${ambiente}`);
 
-    // Fazer requisição para API AUDESP
-    const response = await fetch(apiUrl, {
+    // Fazer requisição para API AUDESP usando http/https nativo
+    const requestOptions = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-authorization': authHeader,
-      },
-      body: JSON.stringify({ email, senha }),
-    });
+      }
+    };
+
+    const response = await makeRequest(apiUrl, requestOptions, JSON.stringify({ email, senha }));
 
     console.log(`[API Proxy] Response status: ${response.status}`);
 
     // Ler resposta
     let data: any = {};
-    const contentType = response.headers.get('content-type');
+    const contentType = response.headers['content-type'] as string;
 
     if (contentType?.includes('application/json')) {
       try {
-        data = await response.json();
+        data = JSON.parse(response.body);
       } catch (parseError) {
         console.error('[API Proxy] Error parsing JSON:', parseError);
-        const text = await response.text();
-        data = { raw: text };
+        data = { raw: response.body };
       }
     } else {
-      const text = await response.text();
-      data = { raw: text };
+      data = { raw: response.body };
     }
 
     // Erro na resposta
-    if (!response.ok) {
+    if (response.status && response.status >= 400) {
       console.error(`[API Proxy] Error response:`, data);
       return res.status(response.status).json({
         success: false,
-        message: data.message || data.mensagem || data.msg || `HTTP ${response.status} ${response.statusText}`,
+        message: data.message || data.mensagem || data.msg || `HTTP ${response.status}`,
         campos_invalidos: data.campos_invalidos || data.campos_inválidos || data.erros,
       });
     }

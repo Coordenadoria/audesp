@@ -2,6 +2,11 @@
   "buildCommand": "npm run build",
   "outputDirectory": "build",
   "public": true,
+  "functions": {
+    "api/**/*.ts": {
+      "runtime": "nodejs18.x"
+    }
+  },
   "headers": [
     {
       "source": "/(.*)",
