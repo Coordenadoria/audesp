@@ -7,6 +7,8 @@ import Dashboard from './components/Dashboard';
 import LoginComponent from './components/LoginComponent';
 import UserProfileManager from './components/UserProfileManager';
 import AudespecForm from './components/AudespecForm';
+import AudespFormDashboard from './components/AudespFormDashboard';
+import AudespTransmissionComponent from './components/AudespTransmissionComponent';
 import { calculateSummary, getAllSectionsStatus } from './services/validationService';
 import { sendPrestacaoContas } from './services/transmissionService';
 
@@ -26,7 +28,7 @@ const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [formData, setFormData] = useState(INITIAL_DATA);
   const [showSidebar, setShowSidebar] = useState(true);
-  const [activeView, setActiveView] = useState<'dashboard' | 'form' | 'summary' | 'json' | 'reports' | 'pdf' | 'audespec'>('audespec');
+  const [activeView, setActiveView] = useState<'dashboard' | 'form' | 'summary' | 'json' | 'reports' | 'pdf' | 'audespec' | 'audesp-v19'>('audesp-v19');
   const [showTransmitModal, setShowTransmitModal] = useState(false);
   const [transmitStatus, setTransmitStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [transmissionHistory, setTransmissionHistory] = useState<any[]>([]);
@@ -125,6 +127,14 @@ const App: React.FC = () => {
               }`}
             >
               🏛️ AUDESP Real v3.0
+            </button>
+            <button
+              onClick={() => setActiveView('audesp-v19')}
+              className={`w-full text-left px-4 py-3 font-medium transition ${
+                activeView === 'audesp-v19' ? 'bg-blue-700' : 'hover:bg-blue-700'
+              }`}
+            >
+              ✨ AUDESP v1.9 (NOVO)
             </button>
             <button
               onClick={() => setActiveView('pdf')}
@@ -240,6 +250,7 @@ const App: React.FC = () => {
             {activeView === 'reports' && 'Gerador de Relatórios'}
             {activeView === 'summary' && 'Resumo Executivo'}
             {activeView === 'json' && 'Visualização JSON'}
+            {activeView === 'audesp-v19' && '✨ AUDESP v1.9 - Sistema Completo (Validação + Sincronização + Transmissão)'}
           </h2>
           <div className="w-24" />
         </div>
@@ -259,6 +270,26 @@ const App: React.FC = () => {
                 status: 'Enviado'
               }]);
             }} />
+          )}
+
+          {activeView === 'audesp-v19' && (
+            <div className="flex-1 overflow-auto">
+              <div className="max-w-7xl mx-auto p-6 space-y-6">
+                <AudespFormDashboard />
+                <AudespTransmissionComponent 
+                  formData={formData}
+                  isValid={true}
+                  onTransmissionComplete={(protocol) => {
+                    alert(`✅ Protocolo: ${protocol}`);
+                    setTransmissionHistory([...transmissionHistory, {
+                      protocolo: protocol,
+                      data: new Date().toISOString(),
+                      status: 'Enviado'
+                    }]);
+                  }}
+                />
+              </div>
+            </div>
           )}
 
           {activeView === 'form' && (
