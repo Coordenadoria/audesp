@@ -1,0 +1,821 @@
+openapi: 3.0.0
+info:
+  title: AUDESP v3.0 - Prestação de Contas API
+  description: |
+    API para gestão de Prestações de Contas de Convênios
+    100% compatível com JSON Schema v1.9 (Resolução TCE-SP)
+  version: 1.0.0
+  contact:
+    name: Coordenadoria de Tecnologia
+    email: dev@audesp.gov.br
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:3000/api
+    description: Development
+  - url: https://api-staging.audesp.gov.br/api
+    description: Staging
+  - url: https://api.audesp.gov.br/api
+    description: Production
+
+tags:
+  - name: Authentication
+    description: Autenticação e gestão de sessões
+  - name: Prestações
+    description: CRUD de Prestações de Contas
+  - name: Validação
+    description: Validação de dados contra JSON Schema
+  - name: JSON Export
+    description: Geração e exportação de JSON v1.9
+  - name: Auditoria
+    description: Logs e histórico de operações
+  - name: Admin
+    description: Operações administrativas
+
+paths:
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Registrar novo usuário
+      operationId: registerUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - cpf
+                - nome
+                - senha
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: usuario@example.com
+                cpf:
+                  type: string
+                  pattern: '^\d{11}$'
+                  description: CPF sem formatação (11 dígitos)
+                  example: "12345678901"
+                nome:
+                  type: string
+                  minLength: 3
+                  maxLength: 255
+                  example: João Silva
+                senha:
+                  type: string
+                  format: password
+                  minLength: 8
+                  description: Mínimo 8 caracteres, 1 maiúscula, 1 número
+                  example: SenhaForte@123
+      responses:
+        '201':
+          description: Usuário criado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Dados inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Usuário já existe (email ou CPF duplicado)
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Fazer login
+      operationId: loginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - senha
+              properties:
+                email:
+                  type: string
+                  format: email
+                senha:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: Login bem-sucedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Email ou senha inválidos
+
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: Fazer logout
+      operationId: logoutUser
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Logout bem-sucedido
+        '401':
+          description: Não autenticado
+
+  /auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: Renovar token JWT
+      operationId: refreshToken
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Token renovado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+        '401':
+          description: Token expirado ou inválido
+
+  /auth/me:
+    get:
+      tags:
+        - Authentication
+      summary: Obter dados do usuário autenticado
+      operationId: getCurrentUser
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Dados do usuário
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Não autenticado
+
+  /prestacoes:
+    get:
+      tags:
+        - Prestações
+      summary: Listar prestações do usuário
+      operationId: listPrestacoes
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [rascunho, validado, enviado, rejeitado]
+          description: Filtrar por status
+        - name: skip
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: take
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Lista de prestações
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PrestacaoListItem'
+        '401':
+          description: Não autenticado
+
+    post:
+      tags:
+        - Prestações
+      summary: Criar nova prestação
+      operationId: createPrestacao
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - competencia
+              properties:
+                competencia:
+                  type: string
+                  format: date
+                  description: Data de início do período (YYYY-MM-DD)
+                  example: "2025-01-01"
+      responses:
+        '201':
+          description: Prestação criada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Prestacao'
+        '400':
+          description: Dados inválidos
+        '401':
+          description: Não autenticado
+
+  /prestacoes/{id}:
+    get:
+      tags:
+        - Prestações
+      summary: Obter prestação por ID
+      operationId: getPrestacao
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Dados da prestação
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Prestacao'
+        '404':
+          description: Prestação não encontrada
+        '403':
+          description: Sem permissão
+
+    patch:
+      tags:
+        - Prestações
+      summary: Atualizar prestação
+      operationId: updatePrestacao
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                descritor:
+                  $ref: '#/components/schemas/Descritor'
+                responsaveis:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Responsavel'
+                contratos:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Contrato'
+                documentosFiscais:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/DocumentoFiscal'
+                pagamentos:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Pagamento'
+      responses:
+        '200':
+          description: Prestação atualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Prestacao'
+        '400':
+          description: Dados inválidos
+        '404':
+          description: Não encontrada
+
+    delete:
+      tags:
+        - Prestações
+      summary: Deletar prestação
+      operationId: deletePrestacao
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Deletado com sucesso
+        '404':
+          description: Não encontrada
+
+  /prestacoes/{id}/history:
+    get:
+      tags:
+        - Prestações
+      summary: Obter histórico de versões
+      operationId: getPrestacaoHistory
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Lista de versões anteriores
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    versao:
+                      type: integer
+                    dataCriacao:
+                      type: string
+                      format: date-time
+                    usuario:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        nome:
+                          type: string
+
+  /prestacoes/{id}/restore:
+    post:
+      tags:
+        - Prestações
+      summary: Restaurar versão anterior
+      operationId: restorePrestacaoVersion
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - versao
+              properties:
+                versao:
+                  type: integer
+      responses:
+        '200':
+          description: Versão restaurada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Prestacao'
+
+  /validate:
+    post:
+      tags:
+        - Validação
+      summary: Validar dados contra JSON Schema
+      operationId: validateData
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Dados a serem validados
+      responses:
+        '200':
+          description: Resultado da validação
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        path:
+                          type: string
+                        message:
+                          type: string
+                        code:
+                          type: string
+                  warnings:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        path:
+                          type: string
+                        message:
+                          type: string
+
+  /prestacoes/{id}/generate-json:
+    post:
+      tags:
+        - JSON Export
+      summary: Gerar JSON v1.9 validado
+      operationId: generateJSON
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: JSON gerado e validado
+          content:
+            application/json:
+              schema:
+                type: object
+                description: JSON v1.9 Prestação de Contas
+        '400':
+          description: Prestação contém erros de validação
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  errors:
+                    type: array
+
+  /prestacoes/{id}/download-json:
+    get:
+      tags:
+        - JSON Export
+      summary: Download JSON v1.9
+      operationId: downloadJSON
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Arquivo JSON
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /auditoria:
+    get:
+      tags:
+        - Auditoria
+      summary: Obter logs de auditoria
+      operationId: getAuditLogs
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: prestacaoId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: acao
+          in: query
+          schema:
+            type: string
+            enum: [CREATE, UPDATE, DELETE, VALIDATE, EXPORT]
+        - name: dataInicio
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: dataFim
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: skip
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: take
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Logs de auditoria
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        usuario:
+                          type: object
+                        prestacaoId:
+                          type: string
+                        acao:
+                          type: string
+                        dadosAntigos:
+                          type: object
+                        dadosNovos:
+                          type: object
+                        timestamp:
+                          type: string
+                          format: date-time
+
+components:
+  schemas:
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          description: JWT token
+        user:
+          $ref: '#/components/schemas/User'
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        cpf:
+          type: string
+        nome:
+          type: string
+        dataCriacao:
+          type: string
+          format: date-time
+
+    Prestacao:
+      type: object
+      required:
+        - id
+        - usuarioId
+        - status
+        - versao
+        - competencia
+        - dataCriacao
+        - dataAtualizacao
+      properties:
+        id:
+          type: string
+          format: uuid
+        usuarioId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [rascunho, validado, enviado, rejeitado]
+        versao:
+          type: integer
+        competencia:
+          type: string
+          format: date
+        descritor:
+          $ref: '#/components/schemas/Descritor'
+        responsaveis:
+          type: array
+          items:
+            $ref: '#/components/schemas/Responsavel'
+        contratos:
+          type: array
+          items:
+            $ref: '#/components/schemas/Contrato'
+        documentosFiscais:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentoFiscal'
+        pagamentos:
+          type: array
+          items:
+            $ref: '#/components/schemas/Pagamento'
+        dataCriacao:
+          type: string
+          format: date-time
+        dataAtualizacao:
+          type: string
+          format: date-time
+
+    PrestacaoListItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        competencia:
+          type: string
+          format: date
+        status:
+          type: string
+        versao:
+          type: integer
+        dataAtualizacao:
+          type: string
+          format: date-time
+
+    Descritor:
+      type: object
+      required:
+        - numero
+        - competencia
+        - nomeGestor
+        - cpfGestor
+        - nomeResponsavel
+        - cpfResponsavel
+      properties:
+        numero:
+          type: string
+          description: Número da prestação
+        competencia:
+          type: string
+          format: date
+        nomeGestor:
+          type: string
+        cpfGestor:
+          type: string
+          pattern: '^\d{11}$'
+        nomeResponsavel:
+          type: string
+        cpfResponsavel:
+          type: string
+          pattern: '^\d{11}$'
+        dataAtualizacao:
+          type: string
+          format: date
+
+    Responsavel:
+      type: object
+      required:
+        - nome
+        - cpf
+        - cargo
+      properties:
+        nome:
+          type: string
+        cpf:
+          type: string
+          pattern: '^\d{11}$'
+        cargo:
+          type: string
+        email:
+          type: string
+          format: email
+        telefone:
+          type: string
+
+    Contrato:
+      type: object
+      required:
+        - numero
+        - fornecedor
+        - cnpjFornecedor
+        - dataInicio
+        - dataFim
+        - valor
+      properties:
+        numero:
+          type: string
+        fornecedor:
+          type: string
+        cnpjFornecedor:
+          type: string
+          pattern: '^\d{14}$'
+        dataInicio:
+          type: string
+          format: date
+        dataFim:
+          type: string
+          format: date
+        valor:
+          type: number
+          format: decimal
+
+    DocumentoFiscal:
+      type: object
+      required:
+        - numero
+        - dataEmissao
+        - valor
+      properties:
+        numero:
+          type: string
+        dataEmissao:
+          type: string
+          format: date
+        valor:
+          type: number
+          format: decimal
+        descricao:
+          type: string
+
+    Pagamento:
+      type: object
+      required:
+        - dataVencimento
+        - valor
+      properties:
+        dataVencimento:
+          type: string
+          format: date
+        dataPagamento:
+          type: string
+          format: date
+        valor:
+          type: number
+          format: decimal
+        descricao:
+          type: string
+
+    ErrorResponse:
+      type: object
+      required:
+        - message
+        - code
+      properties:
+        message:
+          type: string
+        code:
+          type: string
+        details:
+          type: object
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token retornado no login
