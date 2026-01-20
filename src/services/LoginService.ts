@@ -60,8 +60,11 @@ class LoginService {
    * Autenticação via API AUDESP Real
    */
   private async loginReal(email: string, senha: string): Promise<LoginResponse> {
+    const url = `${this.apiUrl}/login`;
+    
     try {
-      const url = `${this.apiUrl}/login`;
+      console.log(`[Login] Iniciando autenticação para: ${email}`);
+      console.log(`[Login] URL: ${url}`);
 
       const response = await fetch(url, {
         method: 'POST',
@@ -70,30 +73,34 @@ class LoginService {
           'x-authorization': `${email}:${senha}`,
           ...(this.apiKey && { 'x-api-key': this.apiKey })
         },
+        credentials: 'include',
         body: JSON.stringify({
           email,
           senha
         })
       });
 
-      // Log para debug
-      console.log(`[Login] POST ${url}`);
       console.log(`[Login] Status: ${response.status}`);
 
       // Tentar parsear resposta
-      let data: any;
-      try {
+      let data: any = {};
+      const contentType = response.headers.get('content-type');
+      
+      if (contentType?.includes('application/json')) {
+        try {
+          data = await response.json();
+          console.log(`[Login] Response: ${JSON.stringify(data).substring(0, 200)}`);
+        } catch (parseError) {
+          console.error(`[Login] Erro ao parsear JSON:`, parseError);
+        }
+      } else {
         const text = await response.text();
-        console.log(`[Login] Response: ${text.substring(0, 200)}`);
-        data = text ? JSON.parse(text) : {};
-      } catch (e) {
-        console.error(`[Login] Erro ao parsear JSON:`, e);
-        data = { message: `HTTP ${response.status}: ${response.statusText}` };
+        console.log(`[Login] Response (não-JSON): ${text.substring(0, 200)}`);
       }
 
       // Erro na resposta
       if (!response.ok) {
-        const errorMsg = data.message || data.mensagem || data.msg || `Erro: ${response.statusText}`;
+        const errorMsg = data.message || data.mensagem || data.msg || data.error || `HTTP ${response.status}`;
         console.error(`[Login] Falha: ${errorMsg}`);
         return {
           success: false,
@@ -103,26 +110,26 @@ class LoginService {
       }
 
       // Sucesso
-      console.log(`[Login] Sucesso!`);
+      console.log(`[Login] ✅ Sucesso!`);
       return {
         success: true,
-        token: data.token || data.access_token,
-        expire_in: data.expire_in || data.expires_in,
+        token: data.token || data.access_token || data.jwt,
+        expire_in: data.expire_in || data.expires_in || 86400,
         token_type: data.token_type || 'bearer',
         message: '✅ Autenticado com sucesso',
         usuario: {
           email,
-          nome: data.nome || data.usuario || this.extrairNomeEmail(email),
-          perfil: data.perfil || data.role || 'Usuário',
-          cpf: data.cpf
+          nome: data.nome || data.usuario || data.name || this.extrairNomeEmail(email),
+          perfil: data.perfil || data.role || data.permission || 'Usuário',
+          cpf: data.cpf || data.document
         }
       };
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
-      console.error(`[Login] Erro de conexão: ${msg}`);
+      console.error(`[Login] ❌ Erro de conexão: ${msg}`);
       return {
         success: false,
-        message: `Erro de conexão com AUDESP: ${msg}`
+        message: `Erro ao conectar com AUDESP: ${msg}. Verifique sua internet e credenciais.`
       };
     }
   }
