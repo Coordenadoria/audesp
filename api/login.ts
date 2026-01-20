@@ -1,6 +1,7 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import https from 'https';
-import http from 'http';
+import * as https from 'https';
+import * as http from 'http';
+import { URL } from 'url';
 
 /**
  * Proxy API para Login AUDESP
@@ -11,20 +12,30 @@ import http from 'http';
  */
 
 // Helper function para fazer request via http/https
-function makeRequest(url: string, options: any, body: string): Promise<any> {
+function makeRequest(urlString: string, options: any, body: string): Promise<any> {
   return new Promise((resolve, reject) => {
-    const protocol = url.startsWith('https') ? https : http;
+    const url = new URL(urlString);
+    const isHttps = url.protocol === 'https:';
+    const protocol = isHttps ? https : http;
     
-    const req = protocol.request(url, options, (res) => {
+    const requestOptions = {
+      hostname: url.hostname,
+      port: url.port,
+      path: url.pathname + url.search,
+      method: options.method || 'GET',
+      headers: options.headers || {}
+    };
+
+    const req = protocol.request(requestOptions, (res) => {
       let data = '';
       
-      res.on('data', (chunk) => {
-        data += chunk;
+      res.on('data', (chunk: Buffer) => {
+        data += chunk.toString();
       });
       
       res.on('end', () => {
         resolve({
-          status: res.statusCode,
+          status: res.statusCode || 500,
           headers: res.headers,
           body: data
         });
