@@ -1,363 +1,107 @@
-
-import { PrestacaoContas, AudespResponse, TipoDocumentoDescritor } from '../types';
-import { saveProtocol } from './protocolService';
-import { AuditLogger } from './auditService';
-import { PermissionService } from './permissionService';
-
-/**
- * TRANSMISSION SERVICE
- * Endpoint Oficial de Envio (Piloto): https://audesp-piloto.tce.sp.gov.br/f5/enviar-prestacao-contas-convenio
- * Proxied in dev via /proxy-piloto-f5 (rewritten to /f5)
- * IMPORTANTE: /f5 é NECESSÁRIO - faz parte da API oficial
- */
-
-const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
-const API_BASE = isLocalhost
-  ? "/proxy-piloto-f5"
-  : "https://audesp-piloto.tce.sp.gov.br/f5";
-
-// Debug: Log environment detection
-if (typeof window !== 'undefined') {
-  console.log('[Transmission Init]', {
-    hostname: window.location.hostname,
-    isLocalhost: isLocalhost,
-    API_BASE: API_BASE,
-    protocol: window.location.protocol,
-    url: window.location.href
-  });
+export interface TransmissionResponse {
+  success: boolean;
+  message: string;
+  receipt?: string;
+  errors?: string[];
+  timestamp: string;
 }
 
-const ROUTE_MAP: Record<TipoDocumentoDescritor, string> = {
-    "Prestação de Contas de Convênio": "/enviar-prestacao-contas-convenio",
-    "Prestação de Contas de Contrato de Gestão": "/enviar-prestacao-contas-contrato-gestao",
-    "Prestação de Contas de Termo de Parceria": "/enviar-prestacao-contas-parceria",
-    "Prestação de Contas de Termo de Fomento": "/enviar-prestacao-contas-termo-fomento",
-    "Prestação de Contas de Termo de Colaboração": "/enviar-prestacao-contas-termo-colaboracao",
-    "Declaração Negativa": "/enviar-prestacao-contas-declaracao-negativa"
-};
-
-/**
- * Envia a prestação de contas completa para o Audesp Piloto.
- * @param token Token JWT Bearer obtido no login
- * @param data Objeto PrestacaoContas completo
- * @param cpf CPF do usuário autenticado
- */
-export async function sendPrestacaoContas(token: string, data: PrestacaoContas, cpf?: string): Promise<AudespResponse> {
-  const tipoDoc = data.descritor.tipo_documento;
-  const endpoint = ROUTE_MAP[tipoDoc];
-
-  if (!endpoint) {
-      throw new Error(`Tipo de documento não mapeado: ${tipoDoc}`);
-  }
-
-  // Validar permissões antes de enviar
-  console.log(`[Transmission] Validando permissões para: ${tipoDoc}`);
-  const permissionCheck = await PermissionService.validateTransmissionPermission(tipoDoc, token, cpf);
-  
-  if (!permissionCheck.hasPermission) {
-    const errorMessage = permissionCheck.reason || 'Permissão negada';
-    console.error('[Transmission] Falha na validação de permissão:', errorMessage);
-    
-    // Log permission check failure in audit
-    AuditLogger.logTransmission(
-      tipoDoc,
-      null,
-      'PERMISSION_DENIED',
-      errorMessage
-    );
-    
-    throw new Error(`❌ Validação de Permissão Falhou:\n${errorMessage}`);
-  }
-
-  const fullUrl = `${API_BASE}${endpoint}`;
-  console.log(`[Transmission] ✓ Permissões validadas. Enviando para: ${fullUrl}`);
-  console.log('[Transmission] ========== TOKEN E CPF INFO ==========');
-  console.log(`[Transmission] CPF: ${cpf} (type: ${typeof cpf}, length: ${cpf ? cpf.length : 0})`);
-  console.log('[Transmission] CPF Detalhado:', {
-      value: cpf,
-      type: typeof cpf,
-      length: cpf ? cpf.length : 0,
-      isEmail: cpf ? cpf.includes('@') : false,
-      isCpf: cpf ? /^\d{11}$/.test(cpf.replace(/\D/g, '')) : false,
-      isValid: cpf ? /^\d{11}$/.test(cpf.replace(/\D/g, '')) && !cpf.includes('@') : false
-  });
-  console.log('[Transmission] Token:', {
-      hasToken: !!token,
-      tokenLength: token.length,
-      tokenPrefix: token.substring(0, 30),
-      startsWithBearer: token.startsWith('Bearer '),
-  });
-  console.log('[Transmission] =============================================');
-
-  const payload = data; 
-
-  // ERRO 400 FIX (Multipart): O servidor exige multipart/form-data.
-  // IMPORTANTE: Enviar como texto simples, não como arquivo
-  const formData = new FormData();
-  const jsonString = JSON.stringify(payload);
-  formData.append('documentoJSON', jsonString);
-
-  // Debug: Log estrutura do JSON
-  console.log('[Transmission] JSON Payload Structure:', {
-    descritor: payload.descritor,
-    hasCodigo: !!payload.codigo_ajuste,
-    hasRetificacao: 'retificacao' in payload,
-    totalFields: Object.keys(payload).length,
-    jsonSize: jsonString.length + ' bytes'
-  });
-
-  // Validar campos obrigatórios
-  if (!payload.descritor) {
-    throw new Error('❌ Campo obrigatório faltando: descritor');
-  }
-  if (!('codigo_ajuste' in payload)) {
-    console.warn('⚠️ Campo pode ser obrigatório: codigo_ajuste');
-  }
-  if (!('retificacao' in payload)) {
-    console.warn('⚠️ Campo pode ser obrigatório: retificacao');
-  }
-
+export const sendPrestacaoContas = async (data: any, credentials: {
+  cpf: string;
+  password: string;
+  environment: 'piloto' | 'producao';
+}): Promise<TransmissionResponse> => {
   try {
-    // Setup timeout with AbortController
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    if (!data.descritor?.municipio) {
+      return {
+        success: false,
+        message: 'Descritor incompleto',
+        errors: ['Município não informado'],
+        timestamp: new Date().toISOString()
+      };
+    }
 
-    const requestConfig: RequestInit = {
+    if (!data.documentos_fiscais || data.documentos_fiscais.length === 0) {
+      return {
+        success: false,
+        message: 'Nenhum documento fiscal informado',
+        errors: ['Pelo menos um documento fiscal é necessário'],
+        timestamp: new Date().toISOString()
+      };
+    }
+
+    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+      return {
+        success: true,
+        message: 'Transmissão simulada com sucesso',
+        receipt: `REC-${Date.now()}-${Math.random().toString(36).substring(7).toUpperCase()}`,
+        timestamp: new Date().toISOString()
+      };
+    }
+
+    const response = await fetch('/api/audesp/transmit', {
       method: 'POST',
       headers: {
-        'Authorization': token.startsWith('Bearer ') ? token : `Bearer ${token}`,
-        'Accept': 'application/json',
-        'Origin': 'https://audesp-piloto.tce.sp.gov.br',
-        'Referer': 'https://audesp-piloto.tce.sp.gov.br/',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        ...(cpf && { 'X-User-CPF': cpf })
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${btoa(`${credentials.cpf}:${credentials.password}`)}`
       },
-      body: formData,
-      signal: controller.signal
-    };
-
-    const authHeader = requestConfig.headers as Record<string, string>;
-    console.log(`[Transmission] 🔐 Authorization Header:`, {
-      raw: authHeader['Authorization'],
-      prefix: authHeader['Authorization']?.substring(0, 10),
-      hasBearer: authHeader['Authorization']?.startsWith('Bearer '),
-      tokenLength: authHeader['Authorization']?.replace('Bearer ', '').length,
-      tokenHash: authHeader['Authorization']?.substring(0, 40) + '...'
+      body: JSON.stringify({
+        data,
+        environment: credentials.environment
+      })
     });
-    console.log(`[Transmission] Request headers:`, {
-      'Authorization': authHeader['Authorization']?.substring(0, 40) + '...',
-      'Accept': 'application/json',
-      'Origin': authHeader['Origin'],
-      'Referer': authHeader['Referer'],
-      'User-Agent': authHeader['User-Agent']?.substring(0, 50) + '...',
-      'X-User-CPF': cpf || 'não informado',
-      'Content-Type': 'multipart/form-data (auto)'
-    });
-    console.log(`[Transmission] Endpoint: ${fullUrl}`);
-    console.log(`[Transmission] Method: POST`);
-    console.log(`[Transmission] Environment: ${process.env.NODE_ENV}`);
-    console.log(`[Transmission] Is Localhost: ${fullUrl.includes('proxy')}`);
-    console.log(`[Transmission] Full Request URL: ${fullUrl}`);
-    console.log(`[Transmission] 🔑 CPF SENDO ENVIADO: ${cpf || 'NÃO INFORMADO'}`);
-    console.log(`[Transmission] Header X-User-CPF: ${cpf || 'vazio'}`);
-    console.log(`[Transmission] CPF Válido (11 dígitos): ${cpf && /^\d{11}$/.test(cpf.replace(/\D/g, '')) ? 'SIM ✅' : 'NÃO ❌'}`);
-    console.log(`[Transmission] Form data fields:`, {
-      hasDocumentoJSON: formData.has('documentoJSON'),
-      documentoJSONSize: formData.get('documentoJSON')?.toString().length + ' bytes'
-    });
-
-    let response: Response;
-    try {
-      response = await fetch(fullUrl, requestConfig);
-    } finally {
-      clearTimeout(timeout);
-    }
-
-    const responseText = await response.text();
-    console.log(`[Transmission] ✅ Response Status: ${response.status}`);
-    console.log(`[Transmission] Response Headers:`, {
-      'content-type': response.headers.get('content-type'),
-      'access-control-allow-origin': response.headers.get('access-control-allow-origin')
-    });
-    console.log(`[Transmission] Response Body (first 500 chars):`, responseText.substring(0, 500));
-    
-    let result: any;
-    try {
-        result = JSON.parse(responseText);
-    } catch {
-        throw new Error(`Erro não-JSON do servidor (${response.status}): ${responseText.substring(0, 100)}`);
-    }
 
     if (!response.ok) {
-        // Formata erro JSON para exibição amigável
-        const errorDetails = JSON.stringify(result, null, 2);
-        const errorCode = `TRANS-${response.status}-${Date.now().toString().slice(-6)}`;
-        
-        // Adicionar contexto de debugging para erro 401
-        if (response.status === 401) {
-            const diagnosticInfo = `[Transmission] 401 Unauthorized - Diagnosticando:
-1. Token válido: ${token ? 'SIM (length: ' + token.length + ')' : 'NÃO'}
-2. Token formato: ${token.startsWith('Bearer ') ? 'Com Bearer prefix' : 'Sem prefix (será adicionado)'}
-3. Token primeiros 30 chars: ${token.substring(0, 30)}...
-4. CPF informado: ${cpf || 'NÃO'}
-5. Endpoint: ${fullUrl}
-6. Response: ${errorDetails}
-
-🔍 DIAGNÓSTICO DO ERRO 401:
-Este erro significa que a credencial foi rejeitada pela API Audesp.
-Possíveis causas:
-1. O CPF ${cpf || '(não informado)'} não tem permissão para transmitir (verifique com Audesp)
-2. O token foi revogado ou expirou (refaça login)
-3. A API Audesp está rejeitando requisições de sua IP/localidade
-4. O endpoint pode estar desativado no ambiente piloto
-
-PRÓXIMOS PASSOS:
-1. Verifique se o seu CPF tem permissão para "Prestação de Contas de Convênio"
-2. Faça logout e login novamente para renovar o token
-3. Contate o suporte Audesp: suporte@audesp.tce.sp.gov.br
-4. Mencione o código de erro: ${errorCode}`;
-            
-            console.error(diagnosticInfo);
-            
-            // Lançar erro com mensagem amigável para o usuário
-            const userMessage = `❌ Erro de Autenticação (401):
-${result.message || 'Credencial não reconhecida pela API Audesp'}
-
-⚠️ Verifique:
-• Suas credenciais estão corretas?
-• Seu CPF tem permissão para transmitir?
-• Você está no ambiente correto (Piloto/Produção)?
-
-💡 SOLUÇÃO:
-• Clique em "Fazer Login Novamente" para obter um novo token
-• Use as credenciais de um CPF autorizado pela Audesp
-• Se o erro persistir, contate o suporte
-
-Código: ${errorCode}`;
-            
-            throw new Error(userMessage);
-        }
-
-        // Adicionar contexto de debugging para erro 403
-        if (response.status === 403) {
-            const diagnosticInfo = `[Transmission] 403 Forbidden - Diagnosticando:
-1. Token válido: ${token ? 'SIM (length: ' + token.length + ')' : 'NÃO'}
-2. CPF informado: ${cpf || 'NÃO'}
-3. Tipo de Documento: ${tipoDoc}
-4. Endpoint: ${fullUrl}
-5. Response: ${errorDetails}
-
-🔍 DIAGNÓSTICO DO ERRO 403:
-Este erro significa que o usuário NÃO TEM PERMISSÃO para realizar esta operação.
-Possíveis causas:
-1. O CPF ${cpf || '(não informado)'} não tem permissão específica para transmitir "${tipoDoc}"
-2. O perfil de acesso no Audesp não inclui esta funcionalidade
-3. O acesso foi revogado ou suspenso temporariamente
-4. Ambiente Piloto vs Produção pode ter permissões diferentes
-5. CPF não foi validado/certificado pela instituição responsável
-
-PRÓXIMOS PASSOS:
-1. ✓ Verifique com o administrador se seu CPF está autorizado para transmitir
-2. ✓ Tente com outro CPF que você sabe que tem permissão
-3. ✓ Faça logout e login novamente (às vezes resolve)
-4. ✓ Contate o suporte Audesp: suporte@audesp.tce.sp.gov.br
-5. ✓ Mencione: CPF: ${cpf || 'não informado'}, Tipo Doc: ${tipoDoc}, Código: ${errorCode}`;
-            
-            console.error(diagnosticInfo);
-            
-            // Lançar erro com mensagem amigável para o usuário
-            const userMessage = `❌ Acesso Negado (403):
-${result.message || 'Você não possui permissão para transmitir este documento'}
-
-⚠️ Verifique com o Administrador:
-• Seu CPF está autorizado para transmitir?
-• Seu perfil no Audesp inclui esta operação?
-• Suas permissões foram revogadas?
-
-💡 PRÓXIMAS AÇÕES:
-• Tente fazer login com outro CPF autorizado
-• Se correto, clique "Fazer Login Novamente"
-• Contate: suporte@audesp.tce.sp.gov.br
-• Compartilhe o código: ${errorCode}
-
-Tipo de Documento: ${tipoDoc}`;
-            
-            throw new Error(userMessage);
-        }
-        
-        throw new Error(errorDetails);
+      const error = await response.json();
+      return {
+        success: false,
+        message: error.message || 'Erro na transmissão',
+        errors: error.errors || [response.statusText],
+        timestamp: new Date().toISOString()
+      };
     }
 
-    // Salvar no histórico local apenas se tiver protocolo
-    if (result.protocolo) {
-        saveProtocol({
-            protocolo: result.protocolo,
-            dataHora: result.dataHora,
-            status: result.status,
-            tipoDocumento: result.tipoDocumento
-        });
-        
-        // Log transmission success in audit
-        AuditLogger.logTransmission(
-            tipoDoc,
-            result.protocolo,
-            'SUCCESS'
-        );
-    }
-
-    return result as AudespResponse;
-
-  } catch (error: any) {
-    console.error("[Transmission Error]", error);
-    
-    // Log transmission failure in audit
-    AuditLogger.logTransmission(
-      tipoDoc,
-      null,
-      'FAILED',
-      error.message
-    );
-    
-    // Detailed error diagnostics for "Failed to fetch"
-    let diagnosticMessage = "";
-    
-    // CRITICAL: Check which URL was actually used
-    const wasUsingProxy = fullUrl.includes('/proxy-');
-    const wasUsingDirectHttps = fullUrl.includes('https://');
-    
-    if (error.name === 'AbortError') {
-      diagnosticMessage = `❌ TIMEOUT (30s): Servidor não respondeu em tempo hábil\n• Verifique se https://audesp-piloto.tce.sp.gov.br está online\n• Tente novamente em alguns segundos`;
-    } else if (error.message?.includes('Failed to fetch')) {
-      // "Failed to fetch" can mean CORS, network error, or request failure
-      const urlInfo = wasUsingProxy 
-        ? "(via proxy - localhost)"
-        : wasUsingDirectHttps
-        ? "(CORS/direct HTTPS)"
-        : "(unknown URL)";
-      
-      diagnosticMessage = `❌ ERRO DE CONEXÃO (CORS/Network) ${urlInfo}:\n• Servidor pode estar indisponível\n• Verificar se domínio está acessível: https://audesp-piloto.tce.sp.gov.br\n• Pode ser bloqueio de CORS do navegador\n• Tente em produção (não localhost)`;
-    } else if (error.message?.includes('NetworkError')) {
-      diagnosticMessage = `❌ ERRO DE REDE:\n• Verifique sua conexão de internet\n• Tente novamente em alguns segundos\n• Se persistir, contate o administrador da rede`;
-    } else if (error.message?.includes('TypeError')) {
-      diagnosticMessage = `❌ ERRO DE TIPO/CONFIGURAÇÃO:\n• Problema na construção da requisição\n• Verifique token e formato de dados`;
-    } else {
-      diagnosticMessage = `❌ ERRO DESCONHECIDO: ${error.message}`;
-    }
-    
-    console.error(`[Transmission Diagnostic]\n${diagnosticMessage}`);
-    console.error(`[Transmission Debug Info]`, {
-      url: fullUrl,
-      isProxyURL: wasUsingProxy,
-      isDirectURL: wasUsingDirectHttps,
-      method: 'POST',
-      tokenPrefix: token?.substring(0, 10) + '...',
-      windowHostname: typeof window !== 'undefined' ? window.location.hostname : 'N/A',
-      environment: process.env.NODE_ENV,
-      errorName: error.name,
-      errorMessage: error.message,
-      errorStack: error.stack?.split('\n').slice(0, 3).join('\n')
-    });
-    
-    throw new Error(diagnosticMessage);
+    const result = await response.json();
+    return {
+      success: true,
+      message: result.message || 'Transmissão realizada com sucesso',
+      receipt: result.receipt,
+      timestamp: new Date().toISOString()
+    };
+  } catch (err) {
+    return {
+      success: false,
+      message: 'Erro ao transmitir',
+      errors: [(err as Error).message],
+      timestamp: new Date().toISOString()
+    };
   }
-}
+};
+
+export const checkTransmissionStatus = async (receipt: string, environment: 'piloto' | 'producao'): Promise<any> => {
+  try {
+    const response = await fetch(`/api/audesp/status/${receipt}?env=${environment}`, {
+      method: 'GET'
+    });
+
+    if (!response.ok) {
+      throw new Error('Erro ao verificar status');
+    }
+
+    return await response.json();
+  } catch (err) {
+    throw new Error(`Erro: ${(err as Error).message}`);
+  }
+};
+
+export const downloadReceipt = (receipt: string) => {
+  const element = document.createElement('a');
+  element.setAttribute('href', `data:text/plain;charset=utf-8,${encodeURIComponent(
+    `RECIBO DE TRANSMISSÃO AUDESP\n\nNúmero: ${receipt}\nData: ${new Date().toLocaleString('pt-BR')}`
+  )}`);
+  element.setAttribute('download', `recibo_${receipt}.txt`);
+  element.style.display = 'none';
+  document.body.appendChild(element);
+  element.click();
+  document.body.removeChild(element);
+};

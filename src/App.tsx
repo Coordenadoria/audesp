@@ -1,594 +1,394 @@
-
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { INITIAL_DATA, PrestacaoContas, AudespResponse } from './types';
-import { logout, isAuthenticated, getToken } from './services/authService';
+import React, { useState, useMemo, useCallback } from 'react';
+import { Download, Upload, Send, AlertCircle, CheckCircle, Eye, EyeOff, Menu, X, FileUp } from 'lucide-react';
+import FormBuilder from './components/FormBuilder';
+import ReportGenerator from './components/ReportGenerator';
+import PDFOCRExtractor from './components/PDFOCRExtractor';
+import { calculateSummary, getAllSectionsStatus } from './services/validationService';
 import { sendPrestacaoContas } from './services/transmissionService';
-import { validatePrestacaoContas, getAllSectionsStatus, validateConsistency } from './services/validationService';
-import { downloadJson } from './services/fileService';
-import { FullReportImporter } from './components/FullReportImporter';
-import { TransmissionResult } from './components/TransmissionResult';
-import { CredentialsModal } from './components/CredentialsModal';
-import { ErrorHelpPanel } from './components/ErrorHelpPanel';
-import EnhancedLoginComponent from './components/EnhancedLoginComponent';
-import ErrorDiagnosticsService, { ErrorDiagnostic } from './services/errorDiagnosticsService';
-import ModernMainLayout from './components/ModernMainLayout';
 
-interface Notification {
-    message: string;
-    type: 'success' | 'error' | 'info';
-}
+const INITIAL_DATA = {
+  descritor: {},
+  contratos: [],
+  documentos_fiscais: [],
+  pagamentos: [],
+  bens_moveis: [],
+  bens_imoveis: [],
+  empregados: [],
+  resumo_executivo: {}
+};
 
 const App: React.FC = () => {
-  const [activeSection, setActiveSection] = useState('dashboard');
-  const [formData, setFormData] = useState<PrestacaoContas>(INITIAL_DATA);
-  const [showTransmissionModal, setShowTransmissionModal] = useState(false);
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [notification, setNotification] = useState<Notification | null>(null);
-  
-  // New State for Detailed Result
-  const [audespResult, setAudespResult] = useState<AudespResponse | null>(null);
-  const [transmissionStatus, setTransmissionStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
+  const [formData, setFormData] = useState(INITIAL_DATA);
+  const [showSidebar, setShowSidebar] = useState(true);
+  const [activeView, setActiveView] = useState<'form' | 'summary' | 'json' | 'reports' | 'pdf'>('form');
+  const [showTransmitModal, setShowTransmitModal] = useState(false);
+  const [transmitStatus, setTransmitStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
 
-  // Credentials Modal State
-  const [showCredentialsModal, setShowCredentialsModal] = useState(false);
-
-  // Error Help Panel State
-  const [showErrorPanel, setShowErrorPanel] = useState(false);
-  const [errorPanelData, setErrorPanelData] = useState<any>(null);
-  const [errorPanelDiagnostics, setErrorPanelDiagnostics] = useState<ErrorDiagnostic[]>([]);
-
-  // Validation State (Computed)
+  const summary = useMemo(() => calculateSummary(formData), [formData]);
   const sectionStatus = useMemo(() => getAllSectionsStatus(formData), [formData]);
 
-  // Auth State - Enhanced with Environment
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
-  const [authToken, setAuthToken] = useState<string | null>(null);
-  const [authCpf, setAuthCpf] = useState<string>('');
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [authEnvironment, setAuthEnvironment] = useState<'piloto' | 'producao'>('piloto');
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [activeTab, setActiveTab] = useState<string>('form');
+  const handleExportJson = useCallback(() => {
+    const dataStr = JSON.stringify(formData, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    const exportFileDefaultName = `audesp_${new Date().toISOString().split('T')[0]}.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+  }, [formData]);
 
-  const authTokenRef = useRef<string | null>(authToken);
-
-  useEffect(() => {
-      authTokenRef.current = authToken;
-  }, [authToken]);
-
-  // Close modal on ESC key
-  useEffect(() => {
-      const handleEsc = (e: KeyboardEvent) => {
-          if (e.key === 'Escape' && showTransmissionModal) {
-              setShowTransmissionModal(false);
-              setTransmissionLog([]);
-              setTransmissionErrors([]);
-          }
+  const handleImportJson = useCallback(() => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/json';
+    input.onchange = (e: any) => {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = (event: any) => {
+        try {
+          const data = JSON.parse(event.target.result);
+          setFormData(data);
+        } catch (err) {
+          alert('Erro ao carregar JSON: ' + (err as Error).message);
+        }
       };
-      window.addEventListener('keydown', handleEsc);
-      return () => window.removeEventListener('keydown', handleEsc);
-  }, [showTransmissionModal]);
-
-  useEffect(() => {
-      try {
-          // Check if already authenticated
-          if (isAuthenticated()) {
-              setIsLoggedIn(true);
-              setAuthToken(getToken());
-              const draft = localStorage.getItem('audesp_draft');
-              if (draft) {
-                 try { setFormData(JSON.parse(draft)); } catch {}
-              }
-          } else {
-              // Check for demo mode (localhost or development)
-              const isDemoMode = typeof window !== 'undefined' && 
-                  (window.location.hostname === 'localhost' || 
-                   window.location.hostname === '127.0.0.1' ||
-                   window.location.hostname.includes('10.0'));
-              
-              if (isDemoMode || localStorage.getItem('audesp_demo_mode')) {
-                  // Allow demo access without login
-                  setIsLoggedIn(true);
-                  setAuthToken('demo-token-dev');
-                  setAuthEnvironment('piloto');
-                  setAuthCpf('00000000000');
-                  localStorage.setItem('audesp_demo_mode', 'true');
-                  
-                  const draft = localStorage.getItem('audesp_draft');
-                  if (draft) {
-                     try { setFormData(JSON.parse(draft)); } catch {}
-                  }
-              } else {
-                  handleLogout();
-              }
-          }
-      } catch (error) {
-          console.error("Auth initialization error:", error);
-          // Allow demo mode on error
-          setIsLoggedIn(true);
-          setAuthToken('demo-token-recovery');
-          setAuthEnvironment('piloto');
-          setAuthCpf('00000000000');
-      }
+      reader.readAsText(file);
+    };
+    input.click();
   }, []);
 
-  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
-      setNotification({ message, type });
-      setTimeout(() => setNotification(null), 5000);
-  };
-
-  const handleLogout = () => {
-      logout();
-      setAuthToken(null);
-      setIsLoggedIn(false);
-      setAuthCpf('');
-      setAuthEnvironment('piloto');
-      setActiveTab('form');
-  };
-
-  // Enhanced Login Handler from EnhancedLoginComponent
-  const handleEnhancedLoginSuccess = (token: string, environment: 'piloto' | 'producao', cpf: string) => {
-      // Save token to sessionStorage for isAuthenticated() to work
-      sessionStorage.setItem('audesp_token', token);
-      sessionStorage.setItem('audesp_expire', String(Date.now() + 8 * 60 * 60 * 1000)); // 8 hours
-      
-      setAuthToken(token);
-      setAuthEnvironment(environment);
-      setAuthCpf(cpf);
-      setIsLoggedIn(true);
-      setActiveSection('dashboard');
-      setActiveTab('form');
-      showToast(`Login no ambiente ${environment} realizado com sucesso!`, "success");
-      
-      const draft = localStorage.getItem('audesp_draft');
-      if (draft) {
-         try { setFormData(JSON.parse(draft)); } catch {}
-      }
-  };
-
-  const handleEnhancedLoginError = (error: string) => {
-      showToast(error, "error");
-  };
-
-  const handleTransmit = () => {
-      // Show credentials modal first before transmission
-      setShowCredentialsModal(true);
-  };
-
-  const handleCredentialsConfirmed = (cpf: string, email: string) => {
-      setShowCredentialsModal(false);
-      
-      // Update credentials
-      setAuthCpf(cpf);
-      
-      // Now proceed with transmission
-      setShowTransmissionModal(true);
-      setTransmissionStatus('processing');
-      setTransmissionLog([
-          "⏳ Iniciando processo de transmissão...",
-          `👤 Usuário: ${cpf}${email ? ` / ${email}` : ''}`,
-          "Aguarde..."
-      ]);
-      setTransmissionErrors([]);
-      setAudespResult(null);
-      
-      // Use setTimeout to allow modal to render before starting async work
-      setTimeout(async () => {
-          try {
-              console.log('[Transmit] Starting transmission process');
-              
-              // Debug: Check all token sources
-              const tokenFromSessionStorage = sessionStorage.getItem('audesp_token');
-              const expireFromSessionStorage = sessionStorage.getItem('audesp_expire');
-              
-              console.log('[Transmit] Token sources:', {
-                  sessionStorageToken: tokenFromSessionStorage?.substring(0, 20) + '...',
-                  sessionStorageExpire: expireFromSessionStorage,
-                  authTokenRef: authTokenRef.current?.substring(0, 20) + '...',
-                  authTokenState: authToken?.substring(0, 20) + '...',
-                  authCpf: authCpf
-              });
-
-              // Get token - check sessionStorage first (highest priority), then state
-              let token = sessionStorage.getItem('audesp_token') || authToken || authTokenRef.current;
-              
-              // Check authentication
-              if (!token) {
-                  const authError = "❌ Sessão expirada. Faça login novamente.";
-                  setTransmissionLog([authError]);
-                  setTransmissionStatus('error');
-                  setTransmissionErrors([{ field: 'Autenticação', message: 'Token não disponível' }]);
-                  console.error('[Transmit]', authError, { 
-                      sessionStorage: !!tokenFromSessionStorage,
-                      authToken: !!authToken,
-                      authRef: !!authTokenRef.current
-                  });
-                  return;
-              }
-
-              // Check token expiration
-              const expireTime = sessionStorage.getItem('audesp_expire');
-              if (expireTime && Date.now() > parseInt(expireTime)) {
-                  const expireError = "❌ Token expirado. Faça login novamente.";
-                  setTransmissionLog([expireError]);
-                  setTransmissionStatus('error');
-                  setTransmissionErrors([{ field: 'Autenticação', message: 'Token expirado' }]);
-                  console.error('[Transmit]', expireError, { 
-                      now: Date.now(),
-                      expireTime: parseInt(expireTime),
-                      diff: parseInt(expireTime) - Date.now()
-                  });
-                  return;
-              }
-
-              // Ensure token doesn't have "Bearer " prefix (sendPrestacaoContas will add it)
-              if (token.startsWith('Bearer ')) {
-                  token = token.substring(7);
-                  console.log('[Transmit] Removed Bearer prefix from token');
-              }
-              
-              console.log('[Transmit] Token validated and ready:', {
-                  hasToken: !!token,
-                  tokenLength: token?.length,
-                  tokenPrefix: token?.substring(0, 20),
-                  cpf: authCpf,
-                  expiresIn: expireTime ? Math.ceil((parseInt(expireTime) - Date.now()) / 1000) + 's' : 'unknown'
-              });
-
-              // Step 1: Local Validation
-              setTransmissionLog(prev => [...prev, "📋 Validando estrutura de dados (schema)..."]);
-              const errors = validatePrestacaoContas(formData);
-              console.log('[Transmit] Validation errors:', errors.length);
-              
-              // Step 2: Consistency Check
-              setTransmissionLog(prev => [...prev, "🔗 Verificando consistência contábil (cross-check)..."]);
-              const consistencyErrors = validateConsistency(formData);
-              console.log('[Transmit] Consistency errors:', consistencyErrors.length);
-              
-              // If validation fails, show errors and stop
-              if (errors.length > 0 || consistencyErrors.length > 0) {
-                  setTransmissionStatus('error');
-                  
-                  // Parse errors to extract field names and messages
-                  const parsedErrors = [
-                      ...errors.map((err, idx) => {
-                          const match = err.match(/Campo: (.+?)\s*(?:\||$)/);
-                          const field = match ? match[1] : `Erro ${idx + 1}`;
-                          return { field, message: err };
-                      }),
-                      ...consistencyErrors.map((err, idx) => {
-                          const match = err.match(/Campo: (.+?)\s*(?:\||$)/);
-                          const field = match ? match[1] : `Consistência ${idx + 1}`;
-                          return { field, message: err };
-                      })
-                  ];
-                  
-                  setTransmissionErrors(parsedErrors);
-                  setTransmissionLog([
-                      "❌ ERRO DE VALIDAÇÃO LOCAL:",
-                      `📊 ${errors.length} erro(s) de validação encontrado(s)`,
-                      `🔗 ${consistencyErrors.length} erro(s) de consistência encontrado(s)`,
-                      "",
-                      "CAMPOS COM PROBLEMAS:",
-                      ...parsedErrors.map(e => `  ⚠️  ${e.field}`)
-                  ]);
-                  console.log('[Transmit] Validation failed, stopping transmission');
-                  return;
-              }
-
-              // Step 3: Send to Audesp
-              setTransmissionLog(prev => [...prev, "✅ Validação local OK!", "🌐 Enviando para Audesp Piloto..."]);
-              console.log('[Transmit] All validations passed, sending to Audesp');
-              
-              // Call the transmission service
-              let res: AudespResponse;
-              try {
-                  res = await sendPrestacaoContas(token, formData, authCpf);
-                  console.log('[Transmit] Response received:', res);
-              } catch (sendError: any) {
-                  // Network or service error
-                  setTransmissionStatus('error');
-                  const errorMessage = sendError.message || String(sendError);
-                  
-                  // Parse error for ErrorHelpPanel
-                  let errorObject: any = {
-                    status: 0,
-                    message: errorMessage
-                  };
-                  
-                  // Try to extract JSON error from message
-                  try {
-                    const jsonMatch = errorMessage.match(/\{[\s\S]*\}/);
-                    if (jsonMatch) {
-                      errorObject = JSON.parse(jsonMatch[0]);
-                    }
-                  } catch (parseErr) {
-                    console.debug('[Transmit] Could not parse error JSON:', parseErr);
-                  }
-                  
-                  console.log('[Transmit] Parsed error object:', errorObject);
-                  
-                  // Show ErrorHelpPanel with error details
-                  setErrorPanelData(errorObject);
-                  const diagnostics = ErrorDiagnosticsService.diagnoseError(errorObject);
-                  console.log('[Transmit] Generated diagnostics:', diagnostics);
-                  setErrorPanelDiagnostics(diagnostics);
-                  setShowErrorPanel(true);
-                  
-                  setTransmissionLog(prev => [
-                      ...prev,
-                      "❌ ERRO NA TRANSMISSÃO:",
-                      errorMessage,
-                      "",
-                      "💡 SUGESTÕES:",
-                      "  • Clique em '📄 Ver JSON com Erros' para análise detalhada",
-                      "  • Verifique sua conexão com a internet",
-                      "  • Tente novamente em alguns segundos",
-                      "  • Se o erro persistir, contate o administrador"
-                  ]);
-                  setTransmissionErrors([{ 
-                      field: 'Transmissão', 
-                      message: errorMessage 
-                  }]);
-                  console.error('[Transmit] Transmission failed:', sendError);
-                  return;
-              }
-              
-              // Step 4: Handle Audesp Response
-              console.log('[Transmit] Processing response, status:', res.status);
-              
-              if (res.status === 'Rejeitado') {
-                  setTransmissionStatus('error');
-                  
-                  // Extract rejection reasons if available
-                  const rejectionErrors = (res as any).erros || [];
-                  setTransmissionErrors(
-                      rejectionErrors.map((err: any) => ({
-                          field: err.campo || err.field || 'Desconhecido',
-                          message: err.mensagem || err.message || JSON.stringify(err)
-                      }))
-                  );
-                  
-                  setTransmissionLog(prev => [
-                      ...prev, 
-                      "",
-                      "❌ DOCUMENTO REJEITADO PELO AUDESP", 
-                      `📄 Protocolo: ${res.protocolo}`,
-                      "",
-                      "🔴 MOTIVOS DA REJEIÇÃO:",
-                      ...rejectionErrors.map((e: any) => `  • ${e.campo || e.field}: ${e.mensagem || e.message}`)
-                  ]);
-              } else if (res.status === 'Armazenado') {
-                  setTransmissionStatus('success');
-                  setTransmissionLog(prev => [...prev, "", "⚠️  ALERTA: Documento Armazenado com Ressalvas.", `📄 Protocolo: ${res.protocolo}`]);
-              } else {
-                  setTransmissionStatus('success');
-                  setTransmissionLog(prev => [...prev, "✅ SUCESSO: Documento Recebido.", `Protocolo: ${res.protocolo}`]);
-              }
-
-              // Show detailed result modal
-              setAudespResult(res);
-              setShowTransmissionModal(false); // Close log modal to show result modal
-
-          } catch (err: any) {
-              setTransmissionStatus('error');
-              let errorMessage = err.message;
-              
-              // Try to format JSON error messages nicely
-              try {
-                  const jsonErr = JSON.parse(errorMessage);
-                  errorMessage = JSON.stringify(jsonErr, null, 2);
-              } catch {
-                  // Not JSON, use original string
-              }
-
-              setTransmissionLog(prev => [...prev, "❌ ERRO TÉCNICO NA TRANSMISSÃO:", errorMessage]);
-              
-              if (errorMessage.includes("401") || errorMessage.includes("Unauthorized")) {
-                  setTimeout(() => handleLogout(), 3000);
-              }
-          }
-      }, 500);
-  };
-
-  // --- File Handlers ---
-  const handleDownload = () => {
-      try {
-          downloadJson(formData);
-          showToast("Arquivo JSON baixado com sucesso!", "success");
-      } catch (err) {
-          showToast("Erro ao gerar arquivo.", "error");
-      }
-  };
-
-  /* Commented: handleLoadJson not used
-  const handleLoadJson = async (file: File) => {
-      try {
-          const data = await loadJson(file);
-          setFormData(data);
-          showToast("Dados carregados com sucesso!", "success");
-      } catch (err: any) {
-          showToast(`Erro ao ler arquivo: ${err.message}`, "error");
-      }
-  };
-  */
-
-  const handleFullImportMerge = (importedData: Partial<PrestacaoContas>) => {
-      setFormData(prev => {
-          const next = { ...prev };
-          // Simplified merge for key arrays
-          if (importedData.relacao_empregados) next.relacao_empregados = [...(prev.relacao_empregados || []), ...importedData.relacao_empregados];
-          if (importedData.contratos) next.contratos = [...(prev.contratos || []), ...importedData.contratos];
-          if (importedData.documentos_fiscais) next.documentos_fiscais = [...(prev.documentos_fiscais || []), ...importedData.documentos_fiscais];
-          if (importedData.pagamentos) next.pagamentos = [...(prev.pagamentos || []), ...importedData.pagamentos];
-          if (importedData.empenhos) next.empenhos = [...(prev.empenhos || []), ...importedData.empenhos];
-          
-          if (importedData.descritor && importedData.descritor.ano) {
-              next.descritor = { ...prev.descritor, ...importedData.descritor };
-          }
-          return next;
-      });
-      setShowImportModal(false);
-      showToast("Dados importados e mesclados com sucesso!", "success");
-  };
-
-  /* Commented: handleNewForm not used
-  const handleNewForm = () => {
-      if(window.confirm("Tem certeza? Isso apagará todos os dados atuais.")) {
-          setFormData(INITIAL_DATA);
-          localStorage.removeItem('audesp_draft');
-          showToast("Formulário reiniciado.", "info");
-      }
-  };
-  */
-
-  const updateField = (path: string, value: any) => {
-      if (typeof path !== 'string') {
-          console.error("CRITICAL: updateField received invalid path. Ignoring.", path, value);
-          return;
-      }
-      setFormData(prev => {
-          const next = JSON.parse(JSON.stringify(prev));
-          const parts = path.split('.');
-          let ref = next;
-          for (let i = 0; i < parts.length - 1; i++) ref = ref[parts[i]] = ref[parts[i]] || {};
-          ref[parts[parts.length - 1]] = value;
-          return next;
-      });
-  };
-
-  const addItem = (path: string, item: any) => {
-      if (typeof path !== 'string') {
-          console.error("CRITICAL: addItem received invalid path.", path);
-          return;
-      }
-      setFormData(prev => {
-          const next = JSON.parse(JSON.stringify(prev));
-          const parts = path.split('.');
-          let ref = next;
-          for (let i = 0; i < parts.length - 1; i++) ref = ref[parts[i]] = ref[parts[i]] || {};
-          const key = parts[parts.length - 1];
-          if (!Array.isArray(ref[key])) ref[key] = [];
-          ref[key].push(item);
-          return next;
-      });
-  };
-
-  const updateItem = (path: string, index: number, field: string, value: any) => {
-     if (typeof path !== 'string') {
-         console.error("CRITICAL: updateItem received invalid path.", path);
-         return;
-     }
-     setFormData(prev => {
-         const next = JSON.parse(JSON.stringify(prev));
-         const parts = path.split('.');
-         let ref = next;
-         for (let i = 0; i < parts.length; i++) ref = ref[parts[i]];
-         if (Array.isArray(ref) && ref[index]) {
-             const itemParts = field.split('.');
-             let itemRef = ref[index];
-             for(let k=0; k<itemParts.length-1; k++) itemRef = itemRef[itemParts[k]] = itemRef[itemParts[k]] || {};
-             itemRef[itemParts[itemParts.length-1]] = value;
-         }
-         return next;
-     });
-  };
-
-  const removeItem = (path: string, index: number) => {
-      if (typeof path !== 'string') return;
-      setFormData(prev => {
-          const next = JSON.parse(JSON.stringify(prev));
-          const parts = path.split('.');
-          let ref = next;
-          for (let i = 0; i < parts.length - 1; i++) ref = ref[parts[i]];
-          const key = parts[parts.length - 1];
-          if (Array.isArray(ref[key])) ref[key].splice(index, 1);
-          return next;
-      });
-  };
-
-  if (!isLoggedIn) {
-      return (
-          <div className="flex items-center justify-center h-screen bg-slate-100">
-              <EnhancedLoginComponent
-                  onLoginSuccess={handleEnhancedLoginSuccess}
-                  onError={handleEnhancedLoginError}
-              />
-          </div>
-      );
-  }
-
-  console.log('[App] Renderizando com isLoggedIn:', isLoggedIn, 'activeSection:', activeSection);
-
   return (
-      <div className="h-screen flex flex-col bg-slate-50 overflow-hidden">
-          {/* MAIN CONTENT - Modern Layout */}
-          <ModernMainLayout
-              activeSection={activeSection}
-              setActiveSection={setActiveSection}
-              formData={formData}
-              updateField={updateField}
-              updateItem={updateItem}
-              addItem={addItem}
-              removeItem={removeItem}
-              handleExtraction={() => {}}
-              handleDownload={handleDownload}
-              onTransmit={handleTransmit}
-              isLoading={transmissionStatus === 'processing'}
-              sectionStatus={sectionStatus}
-          />
+    <div className="flex h-screen bg-gray-100">
+      {/* Sidebar */}
+      {showSidebar && (
+        <div className="w-64 bg-gradient-to-b from-blue-900 to-blue-800 text-white overflow-y-auto">
+          <div className="p-4 border-b border-blue-700">
+            <h1 className="text-xl font-bold">AUDESP v1.9</h1>
+            <p className="text-xs text-blue-200">Prestação de Contas</p>
+          </div>
 
-          {/* MODALS & NOTIFICATIONS */}
-          {notification && (
-              <div className={`fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-xl border-l-4 ${notification.type === 'error' ? 'bg-white border-red-500 text-red-700' : notification.type === 'success' ? 'bg-white border-green-500 text-green-700' : 'bg-white border-blue-500 text-blue-700'}`}>
-                  <p className="font-semibold">{notification.message}</p>
+          {/* Progress */}
+          <div className="p-4 bg-blue-800">
+            <div className="text-sm font-semibold mb-2">Progresso: {sectionStatus.percentage}%</div>
+            <div className="w-full bg-blue-700 rounded-full h-2">
+              <div 
+                className="bg-green-400 h-2 rounded-full transition-all"
+                style={{ width: `${sectionStatus.percentage}%` }}
+              />
+            </div>
+            <div className="text-xs text-blue-200 mt-1">{sectionStatus.completed}/{sectionStatus.total} seções</div>
+          </div>
+
+          {/* Navigation Tabs */}
+          <div className="border-b border-blue-700">
+            <button
+              onClick={() => setActiveView('form')}
+              className={`w-full text-left px-4 py-3 font-medium transition ${
+                activeView === 'form' ? 'bg-blue-700' : 'hover:bg-blue-700'
+              }`}
+            >
+              📋 Formulário
+            </button>
+            <button
+              onClick={() => setActiveView('pdf')}
+              className={`w-full text-left px-4 py-3 font-medium transition ${
+                activeView === 'pdf' ? 'bg-blue-700' : 'hover:bg-blue-700'
+              }`}
+            >
+              📄 OCR/PDF
+            </button>
+            <button
+              onClick={() => setActiveView('reports')}
+              className={`w-full text-left px-4 py-3 font-medium transition ${
+                activeView === 'reports' ? 'bg-blue-700' : 'hover:bg-blue-700'
+              }`}
+            >
+              📊 Relatórios
+            </button>
+            <button
+              onClick={() => setActiveView('summary')}
+              className={`w-full text-left px-4 py-3 font-medium transition ${
+                activeView === 'summary' ? 'bg-blue-700' : 'hover:bg-blue-700'
+              }`}
+            >
+              📈 Resumo
+            </button>
+            <button
+              onClick={() => setActiveView('json')}
+              className={`w-full text-left px-4 py-3 font-medium transition ${
+                activeView === 'json' ? 'bg-blue-700' : 'hover:bg-blue-700'
+              }`}
+            >
+              {} JSON
+            </button>
+          </div>
+
+          {/* Section Status */}
+          <div className="p-4 border-b border-blue-700">
+            <h3 className="text-sm font-semibold mb-3">Status das Seções</h3>
+            {sectionStatus.sections.map(section => (
+              <div key={section.id} className="flex items-center gap-2 text-xs mb-2 p-2 bg-blue-700 rounded">
+                {section.complete ? (
+                  <CheckCircle size={16} className="text-green-300" />
+                ) : (
+                  <AlertCircle size={16} className="text-yellow-300" />
+                )}
+                <span className="flex-1">{section.name}</span>
               </div>
+            ))}
+          </div>
+
+          {/* Actions */}
+          <div className="p-4 space-y-2">
+            <button
+              onClick={handleExportJson}
+              className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white py-2 rounded font-medium transition"
+            >
+              <Download size={18} /> Exportar JSON
+            </button>
+            <button
+              onClick={handleImportJson}
+              className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded font-medium transition"
+            >
+              <Upload size={18} /> Importar JSON
+            </button>
+            <button
+              onClick={() => setShowTransmitModal(true)}
+              disabled={transmitStatus === 'loading'}
+              className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white py-2 rounded font-medium transition disabled:bg-gray-400"
+            >
+              <Send size={18} /> Transmitir
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col">
+        {/* Top Bar */}
+        <div className="bg-white border-b border-gray-200 p-4 flex items-center justify-between">
+          <button
+            onClick={() => setShowSidebar(!showSidebar)}
+            className="p-2 hover:bg-gray-100 rounded"
+          >
+            {showSidebar ? <X size={24} /> : <Menu size={24} />}
+          </button>
+          <h2 className="text-xl font-bold text-gray-900">
+            {activeView === 'form' && 'Formulário de Prestação de Contas'}
+            {activeView === 'pdf' && 'Importador OCR/PDF'}
+            {activeView === 'reports' && 'Gerador de Relatórios'}
+            {activeView === 'summary' && 'Resumo Executivo'}
+            {activeView === 'json' && 'Visualização JSON'}
+          </h2>
+          <div className="w-24" />
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-auto">
+          {activeView === 'form' && (
+            <FormBuilder data={formData} onChange={setFormData} />
           )}
 
-          {showImportModal && (
-              <FullReportImporter 
-                  onDataMerge={handleFullImportMerge} 
-                  onCancel={() => setShowImportModal(false)} 
-              />
+          {activeView === 'pdf' && (
+            <div className="max-w-2xl mx-auto p-6">
+              <PDFOCRExtractor onExtract={(docs) => {
+                if (docs.length > 0) {
+                  const doc = docs[0];
+                  setFormData({
+                    ...formData,
+                    documentos_fiscais: [
+                      ...formData.documentos_fiscais,
+                      {
+                        numero: doc.numero,
+                        tipo: doc.type === 'nota_fiscal' ? 'Nota Fiscal' : 'Outro',
+                        data_emissao: doc.data,
+                        valor_bruto: doc.valor || 0,
+                        fornecedor_cpf: doc.cpf_cnpj
+                      }
+                    ]
+                  });
+                  alert('Documento importado com sucesso!');
+                }
+              }} />
+            </div>
           )}
 
-          {showCredentialsModal && (
-              <CredentialsModal
-                  isOpen={showCredentialsModal}
-                  onConfirm={handleCredentialsConfirmed}
-                  onCancel={() => {
-                      setShowCredentialsModal(false);
-                  }}
-                  currentCpf={authCpf}
-              />
+          {activeView === 'reports' && (
+            <div className="max-w-4xl mx-auto p-6">
+              <ReportGenerator data={formData} />
+            </div>
           )}
 
-          {audespResult && (
-              <TransmissionResult 
-                  result={audespResult} 
-                  onClose={() => setAudespResult(null)} 
-              />
+          {activeView === 'summary' && (
+            <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow m-4">
+              <h1 className="text-2xl font-bold mb-6">Resumo Executivo</h1>
+              
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <div className="text-xs text-gray-600 font-medium">Documentos Fiscais</div>
+                  <div className="text-2xl font-bold text-blue-600">{summary.total_documentos_fiscais}</div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    Total: R$ {summary.valor_total_documentos.toFixed(2)}
+                  </div>
+                </div>
+
+                <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                  <div className="text-xs text-gray-600 font-medium">Pagamentos</div>
+                  <div className="text-2xl font-bold text-green-600">{summary.total_pagamentos}</div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    Total: R$ {summary.valor_total_pagamentos.toFixed(2)}
+                  </div>
+                </div>
+
+                <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                  <div className="text-xs text-gray-600 font-medium">Contratos</div>
+                  <div className="text-2xl font-bold text-purple-600">{summary.total_contratos}</div>
+                </div>
+
+                <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                  <div className="text-xs text-gray-600 font-medium">Bens Móveis</div>
+                  <div className="text-2xl font-bold text-orange-600">{summary.total_bens_moveis || 0}</div>
+                </div>
+
+                <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                  <div className="text-xs text-gray-600 font-medium">Bens Imóveis</div>
+                  <div className="text-2xl font-bold text-red-600">{summary.total_bens_imoveis || 0}</div>
+                </div>
+
+                <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                  <div className="text-xs text-gray-600 font-medium">Empregados</div>
+                  <div className="text-2xl font-bold text-yellow-600">{summary.total_empregados}</div>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <h3 className="font-semibold mb-3">Informações do Descritor</h3>
+                {formData.descritor && Object.keys(formData.descritor).length > 0 ? (
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    {Object.entries(formData.descritor).map(([key, value]) => (
+                      <div key={key}>
+                        <span className="font-medium text-gray-700">{key}:</span>
+                        <span className="text-gray-600 ml-2">{String(value)}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 italic">Nenhuma informação preenchida</p>
+                )}
+              </div>
+            </div>
           )}
 
-          {showErrorPanel && (
-              <ErrorHelpPanel
-                  error={errorPanelData || {}}
-                  jsonData={formData}
-                  diagnostics={errorPanelDiagnostics}
-                  onDismiss={() => {
-                      setShowErrorPanel(false);
-                      setErrorPanelData(null);
-                  }}
-                  onRetry={() => {
-                      setShowErrorPanel(false);
-                      handleTransmit();
-                  }}
-                  onAutoFix={(fixedData) => {
-                      setFormData(fixedData);
-                      setShowErrorPanel(false);
-                  }}
-              />
+          {activeView === 'json' && (
+            <div className="p-4">
+              <div className="bg-white rounded-lg shadow p-6">
+                <h2 className="text-lg font-bold mb-4">JSON Completo</h2>
+                <pre className="bg-gray-100 p-4 rounded overflow-auto text-xs border border-gray-300">
+                  {JSON.stringify(formData, null, 2)}
+                </pre>
+                <button
+                  onClick={() => navigator.clipboard.writeText(JSON.stringify(formData, null, 2))}
+                  className="mt-4 px-4 py-2 bg-blue-600 text-white rounded font-medium hover:bg-blue-700"
+                >
+                  Copiar para Clipboard
+                </button>
+              </div>
+            </div>
           )}
+        </div>
       </div>
+
+      {/* Transmit Modal */}
+      {showTransmitModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-bold mb-4">Transmitir Prestação de Contas</h3>
+
+            {transmitStatus === 'idle' && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">CPF</label>
+                  <input type="text" placeholder="Seu CPF" className="w-full px-3 py-2 border rounded" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Senha</label>
+                  <input type="password" placeholder="Sua senha" className="w-full px-3 py-2 border rounded" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Ambiente</label>
+                  <select className="w-full px-3 py-2 border rounded">
+                    <option>Piloto</option>
+                    <option>Produção</option>
+                  </select>
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowTransmitModal(false)}
+                    className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded font-medium hover:bg-gray-400"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={async () => {
+                      setTransmitStatus('loading');
+                      const result = await sendPrestacaoContas(formData, {
+                        cpf: '00000000000',
+                        password: 'demo',
+                        environment: 'piloto'
+                      });
+                      setTransmitStatus(result.success ? 'success' : 'error');
+                    }}
+                    className="flex-1 px-4 py-2 bg-purple-600 text-white rounded font-medium hover:bg-purple-700"
+                  >
+                    Transmitir
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {transmitStatus === 'loading' && (
+              <div className="text-center py-6">
+                <div className="animate-spin inline-block w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full"></div>
+                <p className="mt-4 text-gray-600">Transmitindo...</p>
+              </div>
+            )}
+
+            {transmitStatus === 'success' && (
+              <div className="text-center py-6">
+                <CheckCircle size={48} className="mx-auto text-green-600 mb-4" />
+                <p className="font-semibold">Transmissão realizada com sucesso!</p>
+                <p className="text-sm text-gray-600 mt-2">Seu recibo foi gerado</p>
+                <button
+                  onClick={() => {
+                    setShowTransmitModal(false);
+                    setTransmitStatus('idle');
+                  }}
+                  className="mt-4 px-4 py-2 bg-blue-600 text-white rounded font-medium hover:bg-blue-700"
+                >
+                  Fechar
+                </button>
+              </div>
+            )}
+
+            {transmitStatus === 'error' && (
+              <div className="text-center py-6">
+                <AlertCircle size={48} className="mx-auto text-red-600 mb-4" />
+                <p className="font-semibold">Erro na transmissão</p>
+                <p className="text-sm text-gray-600 mt-2">Verifique os dados e tente novamente</p>
+                <button
+                  onClick={() => setTransmitStatus('idle')}
+                  className="mt-4 px-4 py-2 bg-blue-600 text-white rounded font-medium hover:bg-blue-700"
+                >
+                  Voltar
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

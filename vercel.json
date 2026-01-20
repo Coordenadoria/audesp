@@ -2,12 +2,6 @@
   "buildCommand": "npm run build",
   "outputDirectory": "build",
   "public": true,
-  "regions": ["sfo1", "iad1"],
-  "env": {
-    "REACT_APP_ENV": "@react_app_env",
-    "REACT_APP_API_BASE_URL": "@react_app_api_base_url",
-    "REACT_APP_WS_BASE_URL": "@react_app_ws_base_url"
-  },
   "headers": [
     {
       "source": "/(.*)",
