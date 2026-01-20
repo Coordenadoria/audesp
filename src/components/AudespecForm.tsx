@@ -14,8 +14,6 @@ import {
   AlertCircle,
   FileJson,
   Send,
-  Check,
-  AlertTriangle,
   Menu,
   X,
   Eye,
@@ -67,18 +65,9 @@ const AudespecForm: React.FC<AudespecFormProps> = ({ onEnvioCompleto }) => {
   const [validacao, setValidacao] = useState<ValidationResult | null>(null);
   const [menuAberto, setMenuAberto] = useState(true);
   const [autenticado, setAutenticado] = useState(false);
-  const [carregando, setCarregando] = useState(false);
   const [jsonView, setJsonView] = useState(false);
-  const [perfil, setPerfil] = useState<'Operador' | 'Gestor' | 'Contador' | 'Auditor Interno' | 'Administrador'>('Operador');
 
   const cliente = new AudespecClient();
-
-  // Dados mock para demonstração
-  const usuariosMock = {
-    operador: { email: 'operador@prefeitura.sp.gov.br', senha: 'operador123' },
-    gestor: { email: 'gestor@prefeitura.sp.gov.br', senha: 'gestor123' },
-    contador: { email: 'contador@prefeitura.sp.gov.br', senha: 'contador123' }
-  };
 
   // Menu hierárquico
   const menuItems: MenuItem[] = [
@@ -180,28 +169,6 @@ const AudespecForm: React.FC<AudespecFormProps> = ({ onEnvioCompleto }) => {
     const resultado = AudespecValidator.validarPrestacao(dados);
     setValidacao(resultado);
   }, [dados]);
-
-  // Componente: Status de Preenchimento
-  const StatusIndicador = ({ status }: { status: 'preenchido' | 'incompleto' | 'erro' }) => {
-    const icons = {
-      preenchido: <Check size={14} className="text-green-600" />,
-      incompleto: <AlertTriangle size={14} className="text-yellow-600" />,
-      erro: <AlertCircle size={14} className="text-red-600" />
-    };
-
-    const cores = {
-      preenchido: 'bg-green-100 text-green-800',
-      incompleto: 'bg-yellow-100 text-yellow-800',
-      erro: 'bg-red-100 text-red-800'
-    };
-
-    return (
-      <span className={`px-2 py-1 rounded text-xs font-semibold flex items-center gap-1 ${cores[status]}`}>
-        {icons[status]}
-        {status === 'preenchido' ? 'Preenchido' : status === 'incompleto' ? 'Incompleto' : 'Erro'}
-      </span>
-    );
-  };
 
   // Componente: Formulário por Seção
   const FormularioPorSecao = () => {
