@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { logger } from './config/logger.js';
 import { config } from './config/env.js';
+import { initializeDatabase } from './config/database.js';
 
 const app: Express = express();
 
@@ -105,11 +106,25 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 const PORT = config.server.port;
 const HOST = config.server.host;
 
-app.listen(PORT, HOST, () => {
-  logger.info(
-    `🚀 Servidor iniciado em http://${HOST}:${PORT} (${config.server.nodeEnv})`,
-  );
-  logger.info(`📝 Documentação: http://${HOST}:${PORT}/api/docs`);
-});
+async function startServer() {
+  try {
+    // Initialize database
+    await initializeDatabase();
+
+    app.listen(PORT, HOST, () => {
+      logger.info(
+        `🚀 Servidor iniciado em http://${HOST}:${PORT} (${config.server.nodeEnv})`,
+      );
+      logger.info(`📝 Documentação: http://${HOST}:${PORT}/api/docs`);
+    });
+  } catch (error) {
+    logger.error('Falha ao iniciar servidor', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    process.exit(1);
+  }
+}
+
+startServer();
 
 export default app;

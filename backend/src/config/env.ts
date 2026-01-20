@@ -127,3 +127,14 @@ const getConfig = (): Config => {
 };
 
 export const config = getConfig();
+
+// Export individual database config for TypeORM
+export const envConfig = {
+  DB_HOST: process.env.DATABASE_HOST || 'localhost',
+  DB_PORT: parseInt(process.env.DATABASE_PORT || '5432', 10),
+  DB_NAME: process.env.DATABASE_NAME || 'audesp_dev',
+  DB_USER: process.env.DATABASE_USER || 'audesp',
+  DB_PASSWORD: process.env.DATABASE_PASSWORD || 'audesp_password',
+  DB_SSL: process.env.DATABASE_SSL === 'true',
+  NODE_ENV: process.env.NODE_ENV || 'development',
+};

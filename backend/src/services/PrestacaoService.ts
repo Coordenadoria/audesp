@@ -1,326 +1,306 @@
-// src/services/PrestacaoService.ts
-import { v4 as uuidv4 } from 'uuid';
-import { logger } from '../config/logger.js';
-import {
-  Prestacao,
-  CreatePrestacaoInput,
-  UpdatePrestacaoInput,
-  ListPrestacaoFilters,
-  PrestacaoSchema,
-  UpdatePrestacaoSchema,
-} from '../models/Prestacao.js';
+// backend/src/services/PrestacaoService.ts
+import { Repository, Like } from 'typeorm';
+import { AppDataSource } from '../config/database';
+import { Prestacao, PrestacaoStatus } from '../entities/Prestacao';
+import { DocumentoFiscal } from '../entities/DocumentoFiscal';
+import { Pagamento } from '../entities/Pagamento';
+import { Responsavel } from '../entities/Responsavel';
+import { Contrato } from '../entities/Contrato';
+import { logger } from '../config/logger';
 
-/**
- * Serviço de Prestações de Contas
- * Simula banco de dados em memória (será substituído por TypeORM em breve)
- */
+export interface CreatePrestacaoDto {
+  numero: string;
+  competencia: string;
+  nomeGestor?: string;
+  cpfGestor?: string;
+  nomeResponsavelPrincipal?: string;
+  cpfResponsavelPrincipal?: string;
+  usuarioCriadorId: string;
+}
+
+export interface UpdatePrestacaoDto {
+  numero?: string;
+  competencia?: string;
+  status?: PrestacaoStatus;
+  saldoInicial?: number;
+  saldoFinal?: number;
+  nomeGestor?: string;
+  cpfGestor?: string;
+  nomeResponsavelPrincipal?: string;
+  cpfResponsavelPrincipal?: string;
+  observacoes?: string;
+  validado?: boolean;
+  consentimentoLGPD?: boolean;
+}
+
 export class PrestacaoService {
-  // Simular banco de dados em memória
-  private prestacoes: Map<string, Prestacao> = new Map();
-  private versoes: Map<string, Prestacao[]> = new Map();
+  private prestacaoRepository: Repository<Prestacao>;
+  private documentoRepository: Repository<DocumentoFiscal>;
+  private pagamentoRepository: Repository<Pagamento>;
+  private responsavelRepository: Repository<Responsavel>;
+  private contratoRepository: Repository<Contrato>;
+
+  constructor() {
+    this.prestacaoRepository = AppDataSource.getRepository(Prestacao);
+    this.documentoRepository = AppDataSource.getRepository(DocumentoFiscal);
+    this.pagamentoRepository = AppDataSource.getRepository(Pagamento);
+    this.responsavelRepository = AppDataSource.getRepository(Responsavel);
+    this.contratoRepository = AppDataSource.getRepository(Contrato);
+  }
 
   /**
-   * Criar nova prestação
+   * Create a new prestação
    */
-  async create(usuarioId: string, input: CreatePrestacaoInput): Promise<Prestacao> {
+  async createPrestacao(data: CreatePrestacaoDto): Promise<Prestacao> {
     try {
-      const id = uuidv4();
-      const agora = new Date().toISOString();
-
-      const prestacao: Prestacao = {
-        id,
-        usuarioId,
-        competencia: input.competencia,
-        status: 'rascunho',
-        versao: 1,
-        criadoEm: agora,
-        atualizadoEm: agora,
-      };
-
-      // Validar
-      const validado = PrestacaoSchema.parse(prestacao);
-
-      // Armazenar
-      this.prestacoes.set(id, validado);
-      this.versoes.set(id, [validado]);
-
-      logger.info(`Prestação criada: ${id} para usuário ${usuarioId}`);
-      return validado;
+      const prestacao = this.prestacaoRepository.create(data);
+      const saved = await this.prestacaoRepository.save(prestacao);
+      logger.info(`Prestação created: ${saved.id} (${saved.numero})`);
+      return saved;
     } catch (error) {
-      logger.error(`Erro ao criar prestação: ${error}`);
+      logger.error('Error creating prestação', { error });
       throw error;
     }
   }
 
   /**
-   * Obter prestação por ID
+   * Get prestação by ID (with relations)
    */
-  async getById(usuarioId: string, prestacaoId: string): Promise<Prestacao> {
-    const prestacao = this.prestacoes.get(prestacaoId);
-
-    if (!prestacao) {
-      throw new Error('Prestação não encontrada');
+  async getPrestacaoById(id: string): Promise<Prestacao | null> {
+    try {
+      return await this.prestacaoRepository.findOne({
+        where: { id },
+        relations: [
+          'usuarioCriador',
+          'documentosFiscais',
+          'pagamentos',
+          'responsaveis',
+          'contratos',
+        ],
+      });
+    } catch (error) {
+      logger.error('Error getting prestação', { error });
+      throw error;
     }
-
-    // Verificar permissão
-    if (prestacao.usuarioId !== usuarioId) {
-      throw new Error('Sem permissão para acessar esta prestação');
-    }
-
-    // Não retornar deletadas
-    if (prestacao.deletadoEm) {
-      throw new Error('Prestação foi deletada');
-    }
-
-    return prestacao;
   }
 
   /**
-   * Listar prestações do usuário com filtros
+   * List prestações with filters and pagination
    */
-  async list(
-    usuarioId: string,
-    filters: ListPrestacaoFilters,
-  ): Promise<{ total: number; data: Prestacao[] }> {
+  async listPrestacoes(filter: {
+    usuarioCriadorId?: string;
+    status?: PrestacaoStatus;
+    competencia?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{ prestacoes: Prestacao[]; total: number }> {
     try {
-      let prestacoes = Array.from(this.prestacoes.values()).filter((p) => {
-        // Filtrar por usuário
-        if (p.usuarioId !== usuarioId) return false;
+      const page = filter.page || 1;
+      const limit = filter.limit || 10;
+      const skip = (page - 1) * limit;
 
-        // Não incluir deletadas
-        if (p.deletadoEm) return false;
+      const where: any = {};
+      if (filter.usuarioCriadorId) where.usuarioCriadorId = filter.usuarioCriadorId;
+      if (filter.status) where.status = filter.status;
+      if (filter.competencia)
+        where.competencia = Like(`${filter.competencia}%`);
 
-        // Filtrar por status
-        if (filters.status && p.status !== filters.status) return false;
-
-        // Filtrar por competência
-        if (filters.competenciaInicio && p.competencia < filters.competenciaInicio) {
-          return false;
-        }
-        if (filters.competenciaFim && p.competencia > filters.competenciaFim) {
-          return false;
-        }
-
-        return true;
+      const [prestacoes, total] = await this.prestacaoRepository.findAndCount({
+        where,
+        skip,
+        take: limit,
+        order: { criadoEm: 'DESC' },
       });
 
-      // Ordenar por data de atualização DESC
-      prestacoes.sort((a, b) => {
-        const dateA = new Date(a.atualizadoEm || 0).getTime();
-        const dateB = new Date(b.atualizadoEm || 0).getTime();
-        return dateB - dateA;
-      });
-
-      const total = prestacoes.length;
-
-      // Aplicar paginação
-      prestacoes = prestacoes.slice(filters.skip, filters.skip + filters.take);
-
-      return { total, data: prestacoes };
+      return { prestacoes, total };
     } catch (error) {
-      logger.error(`Erro ao listar prestações: ${error}`);
+      logger.error('Error listing prestações', { error });
       throw error;
     }
   }
 
   /**
-   * Atualizar prestação
+   * Update prestação
    */
-  async update(
-    usuarioId: string,
-    prestacaoId: string,
-    input: UpdatePrestacaoInput,
+  async updatePrestacao(id: string, data: UpdatePrestacaoDto): Promise<Prestacao> {
+    try {
+      const prestacao = await this.prestacaoRepository.findOne({ where: { id } });
+      if (!prestacao) {
+        throw new Error('Prestação not found');
+      }
+
+      Object.assign(prestacao, data);
+      const updated = await this.prestacaoRepository.save(prestacao);
+      logger.info(`Prestação updated: ${id}`);
+      return updated;
+    } catch (error) {
+      logger.error('Error updating prestação', { error });
+      throw error;
+    }
+  }
+
+  /**
+   * Delete prestação
+   */
+  async deletePrestacao(id: string): Promise<void> {
+    try {
+      await this.prestacaoRepository.delete(id);
+      logger.info(`Prestação deleted: ${id}`);
+    } catch (error) {
+      logger.error('Error deleting prestação', { error });
+      throw error;
+    }
+  }
+
+  /**
+   * Get summary of prestação
+   */
+  async getSummary(id: string): Promise<{
+    id: string;
+    numero: string;
+    competencia: string;
+    status: PrestacaoStatus;
+    totalDocumentos: number;
+    totalPagamentos: number;
+    totalResponsaveis: number;
+    totalContratos: number;
+    saldoInicial: number;
+    saldoFinal: number;
+  } | null> {
+    try {
+      const prestacao = await this.getPrestacaoById(id);
+      if (!prestacao) return null;
+
+      return {
+        id: prestacao.id,
+        numero: prestacao.numero,
+        competencia: prestacao.competencia,
+        status: prestacao.status,
+        totalDocumentos: prestacao.documentosFiscais?.length || 0,
+        totalPagamentos: prestacao.pagamentos?.length || 0,
+        totalResponsaveis: prestacao.responsaveis?.length || 0,
+        totalContratos: prestacao.contratos?.length || 0,
+        saldoInicial: prestacao.saldoInicial,
+        saldoFinal: prestacao.saldoFinal,
+      };
+    } catch (error) {
+      logger.error('Error getting prestação summary', { error });
+      throw error;
+    }
+  }
+
+  /**
+   * Update validation status
+   */
+  async updateValidationStatus(
+    id: string,
+    validado: boolean,
+    erros?: any[],
+    avisos?: any[],
   ): Promise<Prestacao> {
     try {
-      const prestacao = await this.getById(usuarioId, prestacaoId);
-
-      // Validar dados de entrada
-      const dadosValidados = UpdatePrestacaoSchema.parse(input);
-
-      // Não permitir update de prestações enviadas
-      if (prestacao.status === 'enviado') {
-        throw new Error('Não é possível editar prestações enviadas');
+      const prestacao = await this.prestacaoRepository.findOne({ where: { id } });
+      if (!prestacao) {
+        throw new Error('Prestação not found');
       }
 
-      // Mesclar dados
-      const prestacaoAtualizada: Prestacao = {
-        ...prestacao,
-        ...dadosValidados,
-        versao: prestacao.versao + 1,
-        atualizadoEm: new Date().toISOString(),
-        status: 'rascunho', // Volta a rascunho quando atualiza
-      };
+      prestacao.validado = validado;
+      prestacao.dataValidacao = new Date();
+      prestacao.validacaoErros = erros ? JSON.stringify(erros) : '';
+      prestacao.validacaoAvisos = avisos ? JSON.stringify(avisos) : '';
 
-      // Validar Prestação completa
-      const validado = PrestacaoSchema.parse(prestacaoAtualizada);
-
-      // Armazenar nova versão
-      this.prestacoes.set(prestacaoId, validado);
-
-      // Guardar no histórico
-      const versoes = this.versoes.get(prestacaoId) || [];
-      versoes.push(validado);
-      this.versoes.set(prestacaoId, versoes);
-
-      logger.info(
-        `Prestação atualizada: ${prestacaoId} (versão ${validado.versao}) para usuário ${usuarioId}`,
-      );
-
-      return validado;
+      const updated = await this.prestacaoRepository.save(prestacao);
+      logger.info(`Prestação validation updated: ${id} (${validado ? 'valid' : 'invalid'})`);
+      return updated;
     } catch (error) {
-      logger.error(`Erro ao atualizar prestação: ${error}`);
+      logger.error('Error updating validation status', { error });
       throw error;
     }
   }
 
   /**
-   * Deletar prestação (soft delete)
+   * Update LGPD consent
    */
-  async delete(usuarioId: string, prestacaoId: string): Promise<void> {
+  async updateLGPDConsent(id: string, consentimento: boolean): Promise<Prestacao> {
     try {
-      const prestacao = await this.getById(usuarioId, prestacaoId);
-
-      if (prestacao.status === 'enviado') {
-        throw new Error('Não é possível deletar prestações enviadas');
+      const prestacao = await this.prestacaoRepository.findOne({ where: { id } });
+      if (!prestacao) {
+        throw new Error('Prestação not found');
       }
 
-      const prestacaoDeletada: Prestacao = {
-        ...prestacao,
-        deletadoEm: new Date().toISOString(),
-      };
+      prestacao.consentimentoLGPD = consentimento;
+      prestacao.dataConsentimentoLGPD = new Date();
 
-      this.prestacoes.set(prestacaoId, prestacaoDeletada);
-
-      logger.info(`Prestação deletada: ${prestacaoId} para usuário ${usuarioId}`);
+      const updated = await this.prestacaoRepository.save(prestacao);
+      logger.info(`LGPD consent updated for prestação: ${id}`);
+      return updated;
     } catch (error) {
-      logger.error(`Erro ao deletar prestação: ${error}`);
+      logger.error('Error updating LGPD consent', { error });
       throw error;
     }
   }
 
   /**
-   * Obter histórico de versões
+   * Get financial summary
    */
-  async getHistory(usuarioId: string, prestacaoId: string): Promise<Prestacao[]> {
+  async getFinancialSummary(id: string): Promise<{
+    saldoInicial: number;
+    totalReceitas: number;
+    totalDespesas: number;
+    totalPagamentos: number;
+    saldoFinal: number;
+  } | null> {
     try {
-      const prestacao = await this.getById(usuarioId, prestacaoId);
-      const versoes = this.versoes.get(prestacaoId) || [prestacao];
+      const prestacao = await this.prestacaoRepository.findOne({ where: { id } });
+      if (!prestacao) return null;
 
-      return versoes.sort((a, b) => (b.versao || 0) - (a.versao || 0));
+      return {
+        saldoInicial: prestacao.saldoInicial,
+        totalReceitas: prestacao.totalReceitas,
+        totalDespesas: prestacao.totalDespesas,
+        totalPagamentos: prestacao.totalPagamentos,
+        saldoFinal: prestacao.saldoFinal,
+      };
     } catch (error) {
-      logger.error(`Erro ao obter histórico: ${error}`);
+      logger.error('Error getting financial summary', { error });
       throw error;
     }
   }
 
   /**
-   * Restaurar versão anterior
+   * Update financial totals
    */
-  async restoreVersion(
-    usuarioId: string,
-    prestacaoId: string,
-    versao: number,
+  async updateFinancialTotals(
+    id: string,
+    updates: {
+      saldoInicial?: number;
+      totalReceitas?: number;
+      totalDespesas?: number;
+      totalPagamentos?: number;
+      saldoFinal?: number;
+    },
   ): Promise<Prestacao> {
     try {
-      const prestacao = await this.getById(usuarioId, prestacaoId);
-
-      if (prestacao.status === 'enviado') {
-        throw new Error('Não é possível restaurar versões de prestações enviadas');
+      const prestacao = await this.prestacaoRepository.findOne({ where: { id } });
+      if (!prestacao) {
+        throw new Error('Prestação not found');
       }
 
-      const versoes = this.versoes.get(prestacaoId) || [];
-      const versaoAnterior = versoes.find((v) => v.versao === versao);
+      if (updates.saldoInicial !== undefined) prestacao.saldoInicial = updates.saldoInicial;
+      if (updates.totalReceitas !== undefined) prestacao.totalReceitas = updates.totalReceitas;
+      if (updates.totalDespesas !== undefined) prestacao.totalDespesas = updates.totalDespesas;
+      if (updates.totalPagamentos !== undefined)
+        prestacao.totalPagamentos = updates.totalPagamentos;
+      if (updates.saldoFinal !== undefined) prestacao.saldoFinal = updates.saldoFinal;
 
-      if (!versaoAnterior) {
-        throw new Error(`Versão ${versao} não encontrada`);
-      }
-
-      // Criar nova versão a partir da anterior
-      const novaVersao: Prestacao = {
-        ...versaoAnterior,
-        versao: prestacao.versao + 1,
-        atualizadoEm: new Date().toISOString(),
-        status: 'rascunho',
-      };
-
-      const validado = PrestacaoSchema.parse(novaVersao);
-
-      // Armazenar
-      this.prestacoes.set(prestacaoId, validado);
-      versoes.push(validado);
-      this.versoes.set(prestacaoId, versoes);
-
-      logger.info(
-        `Versão ${versao} restaurada para prestação ${prestacaoId}, nova versão: ${validado.versao}`,
-      );
-
-      return validado;
+      const updated = await this.prestacaoRepository.save(prestacao);
+      logger.info(`Financial totals updated for prestação: ${id}`);
+      return updated;
     } catch (error) {
-      logger.error(`Erro ao restaurar versão: ${error}`);
-      throw error;
-    }
-  }
-
-  /**
-   * Marcar como validado
-   */
-  async validate(usuarioId: string, prestacaoId: string): Promise<Prestacao> {
-    try {
-      const prestacao = await this.getById(usuarioId, prestacaoId);
-
-      if (!prestacao.descritor) {
-        throw new Error('Descritor é obrigatório para validação');
-      }
-
-      const prestacaoValidada: Prestacao = {
-        ...prestacao,
-        status: 'validado',
-        validadoEm: new Date().toISOString(),
-      };
-
-      const validado = PrestacaoSchema.parse(prestacaoValidada);
-
-      this.prestacoes.set(prestacaoId, validado);
-
-      logger.info(`Prestação validada: ${prestacaoId} para usuário ${usuarioId}`);
-
-      return validado;
-    } catch (error) {
-      logger.error(`Erro ao validar prestação: ${error}`);
-      throw error;
-    }
-  }
-
-  /**
-   * Marcar como enviado
-   */
-  async send(usuarioId: string, prestacaoId: string): Promise<Prestacao> {
-    try {
-      const prestacao = await this.getById(usuarioId, prestacaoId);
-
-      if (prestacao.status !== 'validado') {
-        throw new Error('Apenas prestações validadas podem ser enviadas');
-      }
-
-      const prestacaoEnviada: Prestacao = {
-        ...prestacao,
-        status: 'enviado',
-        enviadoEm: new Date().toISOString(),
-      };
-
-      const validado = PrestacaoSchema.parse(prestacaoEnviada);
-
-      this.prestacoes.set(prestacaoId, validado);
-
-      logger.info(`Prestação enviada: ${prestacaoId} para usuário ${usuarioId}`);
-
-      return validado;
-    } catch (error) {
-      logger.error(`Erro ao enviar prestação: ${error}`);
+      logger.error('Error updating financial totals', { error });
       throw error;
     }
   }
 }
 
-// Singleton
 export const prestacaoService = new PrestacaoService();

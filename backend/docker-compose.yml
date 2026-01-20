@@ -63,8 +63,6 @@ volumes:
 networks:
   audesp-network:
     driver: bridge
-      retries: 3
-      start_period: 40s
 
   # Optional: Add React frontend service
   # react-frontend:
