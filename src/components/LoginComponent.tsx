@@ -35,13 +35,33 @@ const LoginComponent: React.FC<{ onSuccess: (user: any) => void }> = ({ onSucces
     setLoading(true);
 
     try {
+      // Validar campos vazios
+      if (!cpf.trim() || !password.trim()) {
+        setError('CPF e senha são obrigatórios');
+        setLoading(false);
+        return;
+      }
+
+      // Validar comprimento do CPF
+      if (cpf.length !== 11) {
+        setError('CPF deve ter exatamente 11 dígitos');
+        setLoading(false);
+        return;
+      }
+
       // Simular validação
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       const user = mockUsers[cpf as keyof typeof mockUsers];
       
-      if (!user || user.password !== password) {
-        setError('CPF ou senha inválidos');
+      if (!user) {
+        setError('CPF não encontrado. Use um CPF válido da lista de teste.');
+        setLoading(false);
+        return;
+      }
+
+      if (user.password !== password) {
+        setError('Senha incorreta para este CPF');
         setLoading(false);
         return;
       }
@@ -54,7 +74,7 @@ const LoginComponent: React.FC<{ onSuccess: (user: any) => void }> = ({ onSucces
         role: 'operator'
       });
     } catch (err) {
-      setError('Erro ao fazer login');
+      setError('Erro ao fazer login. Tente novamente.');
       setLoading(false);
     }
   };
@@ -83,13 +103,15 @@ const LoginComponent: React.FC<{ onSuccess: (user: any) => void }> = ({ onSucces
             <input
               type="text"
               value={cpf}
-              onChange={(e) => setCpf(e.target.value.replace(/\D/g, ''))}
-              placeholder="000.000.000-00"
+              onChange={(e) => setCpf(e.target.value.replace(/\D/g, '').slice(0, 11))}
+              placeholder="00000000000"
               maxLength={11}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
               required
             />
-            <p className="text-xs text-gray-500 mt-1">Demo: 00000000000</p>
+            <p className="text-xs text-gray-500 mt-1">
+              {cpf.length}/11 dígitos | Ex: 00000000000
+            </p>
           </div>
 
           <div>
@@ -146,11 +168,19 @@ const LoginComponent: React.FC<{ onSuccess: (user: any) => void }> = ({ onSucces
         </form>
 
         <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-xs text-gray-700 font-semibold mb-2">Contas de Teste:</p>
-          <ul className="text-xs text-gray-600 space-y-1">
-            <li>📌 CPF: 00000000000 | Senha: demo123</li>
-            <li>📌 CPF: 12345678901 | Senha: teste123</li>
-          </ul>
+          <p className="text-xs text-gray-700 font-semibold mb-3">✅ Credenciais de Teste Válidas:</p>
+          <div className="space-y-2">
+            <div className="bg-white p-2 rounded border border-blue-100 cursor-pointer hover:bg-blue-50" onClick={() => { setCpf('00000000000'); setPassword('demo123'); }}>
+              <p className="text-xs font-mono font-bold text-gray-900">CPF: 00000000000</p>
+              <p className="text-xs font-mono text-gray-600">Senha: demo123</p>
+              <p className="text-xs text-blue-600">👉 Clique para preencher</p>
+            </div>
+            <div className="bg-white p-2 rounded border border-blue-100 cursor-pointer hover:bg-blue-50" onClick={() => { setCpf('12345678901'); setPassword('teste123'); }}>
+              <p className="text-xs font-mono font-bold text-gray-900">CPF: 12345678901</p>
+              <p className="text-xs font-mono text-gray-600">Senha: teste123</p>
+              <p className="text-xs text-blue-600">👉 Clique para preencher</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
