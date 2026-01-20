@@ -63,14 +63,10 @@ class LoginService {
     try {
       const url = `${this.apiUrl}/login`;
 
-      // Header com autenticação em base64 (email:senha)
-      const credentials = Buffer.from(`${email}:${senha}`).toString('base64');
-
       const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Basic ${credentials}`,
           'x-authorization': `${email}:${senha}`,
           ...(this.apiKey && { 'x-api-key': this.apiKey })
         },
@@ -80,24 +76,34 @@ class LoginService {
         })
       });
 
+      // Log para debug
+      console.log(`[Login] POST ${url}`);
+      console.log(`[Login] Status: ${response.status}`);
+
       // Tentar parsear resposta
       let data: any;
       try {
-        data = await response.json();
+        const text = await response.text();
+        console.log(`[Login] Response: ${text.substring(0, 200)}`);
+        data = text ? JSON.parse(text) : {};
       } catch (e) {
-        data = { message: `HTTP ${response.status}` };
+        console.error(`[Login] Erro ao parsear JSON:`, e);
+        data = { message: `HTTP ${response.status}: ${response.statusText}` };
       }
 
       // Erro na resposta
       if (!response.ok) {
+        const errorMsg = data.message || data.mensagem || data.msg || `Erro: ${response.statusText}`;
+        console.error(`[Login] Falha: ${errorMsg}`);
         return {
           success: false,
-          message: data.message || data.mensagem || `Erro: ${response.statusText}`,
-          campos_invalidos: data.campos_invalidos || data.campos_inválidos
+          message: errorMsg,
+          campos_invalidos: data.campos_invalidos || data.campos_inválidos || data.erros
         };
       }
 
       // Sucesso
+      console.log(`[Login] Sucesso!`);
       return {
         success: true,
         token: data.token || data.access_token,
@@ -112,9 +118,11 @@ class LoginService {
         }
       };
     } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      console.error(`[Login] Erro de conexão: ${msg}`);
       return {
         success: false,
-        message: `Erro de conexão com AUDESP: ${error instanceof Error ? error.message : 'Erro desconhecido'}`
+        message: `Erro de conexão com AUDESP: ${msg}`
       };
     }
   }
