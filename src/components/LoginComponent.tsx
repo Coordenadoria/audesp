@@ -2,27 +2,33 @@ import React, { useState } from 'react';
 import { LogIn, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
 
 interface LoginCredentials {
-  email: string;
+  cpf: string;
   password: string;
   environment: 'piloto' | 'producao';
 }
 
 interface AuthContextType {
   isLoggedIn: boolean;
-  user: { email: string; name: string; environment: string } | null;
+  user: { cpf: string; email: string; name: string; environment: string } | null;
   login: (credentials: LoginCredentials) => Promise<boolean>;
   logout: () => void;
 }
 
+// Mapeamento CPF -> Email (para API real)
+const cpfToEmailMap = {
+  '00000000000': 'usuario@tce.sp.gov.br',
+  '12345678901': 'teste@tce.sp.gov.br',
+};
+
 const mockUsers = {
-  'usuario@tce.sp.gov.br': { password: 'demo123', name: 'Usuário Demo' },
-  'teste@tce.sp.gov.br': { password: 'teste123', name: 'Testador AUDESP' },
+  '00000000000': { password: 'demo123', name: 'Usuário Demo', email: 'usuario@tce.sp.gov.br' },
+  '12345678901': { password: 'teste123', name: 'Testador AUDESP', email: 'teste@tce.sp.gov.br' },
 };
 
 export const AuthContext = React.createContext<AuthContextType | null>(null);
 
 const LoginComponent: React.FC<{ onSuccess: (user: any) => void }> = ({ onSuccess }) => {
-  const [email, setEmail] = useState('');
+  const [cpf, setCpf] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [environment, setEnvironment] = useState<'piloto' | 'producao'>('piloto');
@@ -36,16 +42,15 @@ const LoginComponent: React.FC<{ onSuccess: (user: any) => void }> = ({ onSucces
 
     try {
       // Validar campos vazios
-      if (!email.trim() || !password.trim()) {
-        setError('Email e senha são obrigatórios');
+      if (!cpf.trim() || !password.trim()) {
+        setError('CPF e senha são obrigatórios');
         setLoading(false);
         return;
       }
 
-      // Validar formato de email
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        setError('Formato de email inválido (ex: usuario@tce.sp.gov.br)');
+      // Validar comprimento do CPF
+      if (cpf.length !== 11) {
+        setError('CPF deve ter exatamente 11 dígitos');
         setLoading(false);
         return;
       }
@@ -53,22 +58,23 @@ const LoginComponent: React.FC<{ onSuccess: (user: any) => void }> = ({ onSucces
       // Simular validação
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      const user = mockUsers[email as keyof typeof mockUsers];
+      const user = mockUsers[cpf as keyof typeof mockUsers];
       
       if (!user) {
-        setError('Email não encontrado. Use um email válido da lista de teste.');
+        setError('CPF não encontrado. Use um CPF válido da lista de teste.');
         setLoading(false);
         return;
       }
 
       if (user.password !== password) {
-        setError('Senha incorreta para este email');
+        setError('Senha incorreta para este CPF');
         setLoading(false);
         return;
       }
 
       onSuccess({
-        email,
+        cpf,
+        email: user.email,
         name: user.name,
         environment,
         loginTime: new Date().toISOString(),
@@ -100,17 +106,18 @@ const LoginComponent: React.FC<{ onSuccess: (user: any) => void }> = ({ onSucces
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">CPF</label>
             <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="usuario@tce.sp.gov.br"
+              type="text"
+              value={cpf}
+              onChange={(e) => setCpf(e.target.value.replace(/\D/g, '').slice(0, 11))}
+              placeholder="00000000000"
+              maxLength={11}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
               required
             />
             <p className="text-xs text-gray-500 mt-1">
-              Ex: usuario@tce.sp.gov.br | Ex: email@seu-orgao.sp.gov.br
+              {cpf.length}/11 dígitos | Ex: 00000000000
             </p>
           </div>
 
@@ -170,13 +177,13 @@ const LoginComponent: React.FC<{ onSuccess: (user: any) => void }> = ({ onSucces
         <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <p className="text-xs text-gray-700 font-semibold mb-3">✅ Credenciais de Teste Válidas:</p>
           <div className="space-y-2">
-            <div className="bg-white p-2 rounded border border-blue-100 cursor-pointer hover:bg-blue-50" onClick={() => { setEmail('usuario@tce.sp.gov.br'); setPassword('demo123'); }}>
-              <p className="text-xs font-mono font-bold text-gray-900">Email: usuario@tce.sp.gov.br</p>
+            <div className="bg-white p-2 rounded border border-blue-100 cursor-pointer hover:bg-blue-50" onClick={() => { setCpf('00000000000'); setPassword('demo123'); }}>
+              <p className="text-xs font-mono font-bold text-gray-900">CPF: 00000000000</p>
               <p className="text-xs font-mono text-gray-600">Senha: demo123</p>
               <p className="text-xs text-blue-600">👉 Clique para preencher</p>
             </div>
-            <div className="bg-white p-2 rounded border border-blue-100 cursor-pointer hover:bg-blue-50" onClick={() => { setEmail('teste@tce.sp.gov.br'); setPassword('teste123'); }}>
-              <p className="text-xs font-mono font-bold text-gray-900">Email: teste@tce.sp.gov.br</p>
+            <div className="bg-white p-2 rounded border border-blue-100 cursor-pointer hover:bg-blue-50" onClick={() => { setCpf('12345678901'); setPassword('teste123'); }}>
+              <p className="text-xs font-mono font-bold text-gray-900">CPF: 12345678901</p>
               <p className="text-xs font-mono text-gray-600">Senha: teste123</p>
               <p className="text-xs text-blue-600">👉 Clique para preencher</p>
             </div>
