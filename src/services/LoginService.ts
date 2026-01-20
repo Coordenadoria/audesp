@@ -63,45 +63,68 @@ class LoginService {
     const url = `${this.apiUrl}/login`;
     
     try {
-      console.log(`[Login] Iniciando autenticação para: ${email}`);
-      console.log(`[Login] URL: ${url}`);
+      console.log(`
+╔════════════════════════════════════════════════════════════╗
+║ 🔐 INICIANDO LOGIN COM AUDESP                             ║
+╠════════════════════════════════════════════════════════════╣
+║ Email:     ${email.padEnd(52 - 'Email:     '.length)}║
+║ Hora:      ${new Date().toLocaleTimeString('pt-BR').padEnd(52 - 'Hora:      '.length)}║
+║ URL:       ${url.substring(0, 50).padEnd(52 - 'URL:       '.length)}║
+║ Método:    POST                                            ║
+╚════════════════════════════════════════════════════════════╝`);
+
+      const body = JSON.stringify({ email, senha });
+      const authHeader = `${email}:${senha}`;
+      
+      console.log(`[Login] Headers:
+  - Content-Type: application/json
+  - x-authorization: [email:senha]
+  - credentials: include`);
 
       const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-authorization': `${email}:${senha}`,
+          'x-authorization': authHeader,
           ...(this.apiKey && { 'x-api-key': this.apiKey })
         },
         credentials: 'include',
-        body: JSON.stringify({
-          email,
-          senha
-        })
+        body: body
       });
 
-      console.log(`[Login] Status: ${response.status}`);
+      console.log(`\n[Login] 📡 Resposta Recebida:
+  - Status: ${response.status} ${response.statusText}
+  - Content-Type: ${response.headers.get('content-type')}
+  - CORS-Allow-Origin: ${response.headers.get('access-control-allow-origin') || 'N/A'}`);
 
       // Tentar parsear resposta
       let data: any = {};
+      let rawResponse = '';
       const contentType = response.headers.get('content-type');
       
       if (contentType?.includes('application/json')) {
         try {
           data = await response.json();
-          console.log(`[Login] Response: ${JSON.stringify(data).substring(0, 200)}`);
+          rawResponse = JSON.stringify(data, null, 2);
+          console.log(`[Login] 📋 Response Body:\n${rawResponse}`);
         } catch (parseError) {
-          console.error(`[Login] Erro ao parsear JSON:`, parseError);
+          const text = await response.text();
+          rawResponse = text;
+          console.error(`[Login] ❌ Erro ao parsear JSON. Raw text:\n${text}`);
         }
       } else {
         const text = await response.text();
-        console.log(`[Login] Response (não-JSON): ${text.substring(0, 200)}`);
+        rawResponse = text;
+        console.log(`[Login] 📋 Response (não-JSON):\n${text}`);
       }
 
       // Erro na resposta
       if (!response.ok) {
-        const errorMsg = data.message || data.mensagem || data.msg || data.error || `HTTP ${response.status}`;
-        console.error(`[Login] Falha: ${errorMsg}`);
+        const errorMsg = data.message || data.mensagem || data.msg || data.error || `HTTP ${response.status} ${response.statusText}`;
+        console.error(`\n[Login] ❌ FALHA DE AUTENTICAÇÃO
+  - Código: ${response.status}
+  - Mensagem: ${errorMsg}
+  - Dica: ${response.status === 401 ? 'Credenciais incorretas' : response.status === 403 ? 'Acesso negado' : 'Erro no servidor'}`);
         return {
           success: false,
           message: errorMsg,
@@ -109,11 +132,22 @@ class LoginService {
         };
       }
 
-      // Sucesso
-      console.log(`[Login] ✅ Sucesso!`);
+      // Sucesso - procurar token
+      const token = data.token || data.access_token || data.jwt;
+      if (!token) {
+        console.warn(`[Login] ⚠️ AVISO: Resposta 200 mas nenhum token encontrado!
+  - Campos da resposta: ${Object.keys(data).join(', ')}`);
+      }
+
+      console.log(`\n[Login] ✅ SUCESSO DE AUTENTICAÇÃO
+  - Token: ${token ? token.substring(0, 20) + '...' : 'NÃO ENCONTRADO'}
+  - Nome: ${data.nome || data.usuario || data.name || this.extrairNomeEmail(email)}
+  - Perfil: ${data.perfil || data.role || data.permission || 'N/A'}
+  - Expira em: ${data.expire_in || data.expires_in || 'não especificado'} segundos`);
+
       return {
         success: true,
-        token: data.token || data.access_token || data.jwt,
+        token: token,
         expire_in: data.expire_in || data.expires_in || 86400,
         token_type: data.token_type || 'bearer',
         message: '✅ Autenticado com sucesso',
@@ -126,7 +160,11 @@ class LoginService {
       };
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
-      console.error(`[Login] ❌ Erro de conexão: ${msg}`);
+      console.error(`\n[Login] 💥 ERRO CRÍTICO DE CONEXÃO
+  - Tipo: ${error instanceof Error ? error.constructor.name : typeof error}
+  - Mensagem: ${msg}
+  - Stack: ${error instanceof Error ? error.stack : 'N/A'}
+  - Dica: Verifique internet, URL da API, e firewall`);
       return {
         success: false,
         message: `Erro ao conectar com AUDESP: ${msg}. Verifique sua internet e credenciais.`

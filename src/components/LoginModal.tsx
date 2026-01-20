@@ -20,15 +20,26 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess
     setCarregando(true);
     setResposta(null);
 
+    console.log('🔐 [LoginModal] Tentando login com:', email);
+    
     const resultado = await LoginService.login(email, senha);
+    console.log('🔐 [LoginModal] Resultado:', resultado);
+    
     setResposta(resultado);
 
     if (resultado.success && resultado.token && resultado.usuario) {
+      console.log('✅ [LoginModal] Login bem-sucedido! Token:', resultado.token.substring(0, 20) + '...');
+      
       // Armazenar no localStorage
       localStorage.setItem('audesp_token', resultado.token);
       localStorage.setItem('audesp_email', resultado.usuario.email);
       localStorage.setItem('audesp_perfil', resultado.usuario.perfil);
       localStorage.setItem('audesp_nome', resultado.usuario.nome);
+      if (resultado.usuario.cpf) {
+        localStorage.setItem('audesp_cpf', resultado.usuario.cpf);
+      }
+
+      console.log('💾 [LoginModal] Dados salvos em localStorage');
 
       // Callback de sucesso
       onLoginSuccess(resultado.usuario.email, resultado.token, resultado.usuario.perfil);
@@ -40,6 +51,8 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess
         setSenha('');
         setResposta(null);
       }, 2000);
+    } else {
+      console.error('❌ [LoginModal] Falha:', resultado.message);
     }
 
     setCarregando(false);
