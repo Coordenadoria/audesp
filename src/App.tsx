@@ -1,8 +1,10 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Download, Upload, Send, AlertCircle, CheckCircle, Menu, X } from 'lucide-react';
+import { Download, Upload, Send, AlertCircle, CheckCircle, Menu, X, LogOut } from 'lucide-react';
 import FormBuilder from './components/FormBuilder';
 import ReportGenerator from './components/ReportGenerator';
 import PDFOCRExtractor from './components/PDFOCRExtractor';
+import Dashboard from './components/Dashboard';
+import LoginComponent from './components/LoginComponent';
 import { calculateSummary, getAllSectionsStatus } from './services/validationService';
 import { sendPrestacaoContas } from './services/transmissionService';
 
@@ -18,12 +20,16 @@ const INITIAL_DATA = {
 };
 
 const App: React.FC = () => {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [formData, setFormData] = useState(INITIAL_DATA);
   const [showSidebar, setShowSidebar] = useState(true);
-  const [activeView, setActiveView] = useState<'form' | 'summary' | 'json' | 'reports' | 'pdf'>('form');
+  const [activeView, setActiveView] = useState<'dashboard' | 'form' | 'summary' | 'json' | 'reports' | 'pdf'>('dashboard');
   const [showTransmitModal, setShowTransmitModal] = useState(false);
   const [transmitStatus, setTransmitStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [transmissionHistory, setTransmissionHistory] = useState<any[]>([]);
 
+  // Mover hooks para fora do condicional
   const summary = useMemo(() => calculateSummary(formData), [formData]);
   const sectionStatus = useMemo(() => getAllSectionsStatus(formData), [formData]);
 
@@ -58,6 +64,17 @@ const App: React.FC = () => {
     input.click();
   }, []);
 
+  if (!isLoggedIn) {
+    return <LoginComponent onSuccess={(user) => {
+      setCurrentUser(user);
+      setIsLoggedIn(true);
+      localStorage.setItem('audesp_session', JSON.stringify(user));
+      // Carregar histórico salvo
+      const saved = localStorage.getItem('audesp_history');
+      if (saved) setTransmissionHistory(JSON.parse(saved));
+    }} />;
+  }
+
   return (
     <div className="flex h-screen bg-gray-100">
       {/* Sidebar */}
@@ -83,6 +100,14 @@ const App: React.FC = () => {
           {/* Navigation Tabs */}
           <div className="border-b border-blue-700">
             <button
+              onClick={() => setActiveView('dashboard')}
+              className={`w-full text-left px-4 py-3 font-medium transition ${
+                activeView === 'dashboard' ? 'bg-blue-700' : 'hover:bg-blue-700'
+              }`}
+            >
+              📊 Dashboard
+            </button>
+            <button
               onClick={() => setActiveView('form')}
               className={`w-full text-left px-4 py-3 font-medium transition ${
                 activeView === 'form' ? 'bg-blue-700' : 'hover:bg-blue-700'
@@ -104,7 +129,7 @@ const App: React.FC = () => {
                 activeView === 'reports' ? 'bg-blue-700' : 'hover:bg-blue-700'
               }`}
             >
-              📊 Relatórios
+              📈 Relatórios
             </button>
             <button
               onClick={() => setActiveView('summary')}
@@ -112,7 +137,7 @@ const App: React.FC = () => {
                 activeView === 'summary' ? 'bg-blue-700' : 'hover:bg-blue-700'
               }`}
             >
-              📈 Resumo
+              📋 Resumo
             </button>
             <button
               onClick={() => setActiveView('json')}
@@ -139,7 +164,24 @@ const App: React.FC = () => {
             ))}
           </div>
 
-          {/* Actions */}
+          {/* User Info */}
+          <div className="p-4 border-t border-blue-700 bg-blue-700">
+            <div className="text-sm mb-3">
+              <p className="font-semibold text-blue-100">{currentUser?.name}</p>
+              <p className="text-xs text-blue-300">CPF: {currentUser?.cpf}</p>
+              <p className="text-xs text-blue-300">Amb: {currentUser?.environment}</p>
+            </div>
+            <button
+              onClick={() => {
+                setIsLoggedIn(false);
+                setCurrentUser(null);
+                localStorage.removeItem('audesp_session');
+              }}
+              className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white py-2 rounded font-medium transition text-sm"
+            >
+              <LogOut size={16} /> Sair
+            </button>
+          </div>
           <div className="p-4 space-y-2">
             <button
               onClick={handleExportJson}
@@ -175,6 +217,7 @@ const App: React.FC = () => {
             {showSidebar ? <X size={24} /> : <Menu size={24} />}
           </button>
           <h2 className="text-xl font-bold text-gray-900">
+            {activeView === 'dashboard' && '📊 Dashboard Operacional'}
             {activeView === 'form' && 'Formulário de Prestação de Contas'}
             {activeView === 'pdf' && 'Importador OCR/PDF'}
             {activeView === 'reports' && 'Gerador de Relatórios'}
@@ -186,6 +229,10 @@ const App: React.FC = () => {
 
         {/* Content */}
         <div className="flex-1 overflow-auto">
+          {activeView === 'dashboard' && (
+            <Dashboard formData={formData} transmissionHistory={transmissionHistory} />
+          )}
+
           {activeView === 'form' && (
             <FormBuilder data={formData} onChange={setFormData} />
           )}
@@ -334,10 +381,26 @@ const App: React.FC = () => {
                     onClick={async () => {
                       setTransmitStatus('loading');
                       const result = await sendPrestacaoContas(formData, {
-                        cpf: '00000000000',
+                        cpf: currentUser.cpf,
                         password: 'demo',
-                        environment: 'piloto'
+                        environment: currentUser.environment
                       });
+                      
+                      if (result.success) {
+                        const historyEntry = {
+                          id: `${Date.now()}`,
+                          date: new Date().toISOString(),
+                          status: 'sucesso',
+                          registros: (formData.documentos_fiscais?.length || 0) + (formData.pagamentos?.length || 0),
+                          valor: (formData.documentos_fiscais || []).reduce((sum: number, doc: any) => sum + (parseFloat(doc.valor) || 0), 0),
+                          environment: currentUser.environment,
+                          nsu: `NSU${Date.now()}`
+                        };
+                        const newHistory = [...transmissionHistory, historyEntry];
+                        setTransmissionHistory(newHistory);
+                        localStorage.setItem('audesp_history', JSON.stringify(newHistory));
+                      }
+                      
                       setTransmitStatus(result.success ? 'success' : 'error');
                     }}
                     className="flex-1 px-4 py-2 bg-purple-600 text-white rounded font-medium hover:bg-purple-700"
