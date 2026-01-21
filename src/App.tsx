@@ -5,6 +5,8 @@ import FormField from './components/FormField';
 import ObjectGroup from './components/ObjectGroup';
 import JsonViewer from './components/JsonViewer';
 
+// AUDESP v1.9.2 - FASE 1 ATIVA
+// SISTEMA RECONSTRUÍDO DO ZERO - 21/01/2026
 // FASE 1: Descritor + Identificação do Ajuste
 const AUDESP_SCHEMA: Record<string, any> = {
   descritor: {
